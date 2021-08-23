@@ -154,10 +154,10 @@ PR_input = load_data('./data/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 # PR_scenario = ['HISTCR']
 
 
-PR_scenario = list(set(PR_input['scenario']))
-PR_country = list(set(PR_input['country']))
-PR_category = list(set(PR_input['category']))
-PR_entity = ['CO2', 'CH4', 'N2O']
+PR_scenario = sorted(list(set(PR_input['scenario'])))
+PR_country = sorted(list(set(PR_input['country'])))
+PR_category = sorted(list(set(PR_input['category'])))
+PR_entity = sorted(['CO2', 'CH4', 'N2O'])
 
 
 # # Abridged for testing
@@ -185,15 +185,16 @@ PR_year = np.arange(2018 - 1850 + 1) + 1850
 PR_ghgs = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
 PR_co2e = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
 
+
 t1 = dt.datetime.now()
 i = 1
 number_of_series = (len(PR_scenario) * len(PR_country) *
                     len(PR_category) * len(PR_entity))
 
-for scenario in PR_scenario[0:2]:
-    for country in PR_country[0:2]:
-        for category in PR_category[0:2]:
-            for entity in PR_entity[0:2]:
+for scenario in PR_scenario:
+    for country in PR_country:
+        for category in PR_category:
+            for entity in PR_entity:
                 # Visually show how far through the calculation we are
                 name = f'{scenario}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
