@@ -1,7 +1,6 @@
 """Calculate temperatures from PRIMAP emissions."""
 
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas as pd
 import datetime as dt
 # import streamlit as st
@@ -30,7 +29,6 @@ def EFmod(nyr, a):
         Fcal[j:nyr, j] = Fcal[0:nyr-j, 0]
 
     return Fcal
-
 
 
 def FTmod(nyr, a):
@@ -71,16 +69,15 @@ def ETmod(nyr, a):
     # build up the rest of the Toeplitz matrix
     for j in range(1, nyr):
         Tcal[j:nyr, j] = Tcal[0:nyr-j, 0]
-  
+
     return Tcal
 
 
 def a_params(gas):
     """Return the AR5 model parameter sets, in units GtCO2."""
-
     # First set up AR5 model parameters,
     # using syntax of FaIRv1.3 but units of GtCO2, not GtC
-    
+
     m_atm = 5.1352 * 10**18  # AR5 official mass of atmosphere in kg
     m_air = 28.97 * 10**-3   # AR5 official molar mass of air
     # m_car = 12.01 * 10**-3   # AR5 official molar mass of carbon
@@ -98,7 +95,7 @@ def a_params(gas):
     a_ar5[10:12] = [0.631, 0.429]                      # AR5 thermal sensitivity coeffs
     a_ar5[13] = 1.37e-2                                # AR5 rad efficiency in W/m2/ppm
     a_ar5[14] = 0
-    a_ar5[15:17] = [8.400, 409.5]                      # AR5 thermal time-constants -- could use Geoffroy et al [4.1,249.] 
+    a_ar5[15:17] = [8.400, 409.5]                      # AR5 thermal time-constants -- could use Geoffroy et al [4.1,249.]
     a_ar5[18:21] = 0
 
     ECS = 3.0
@@ -128,21 +125,23 @@ def a_params(gas):
         print(f'WARNING: {gas} is not a recognised gas')
 
 
-
 def emissions_units(PR_input):
-    """Returns pandas DataFrame of entities (gases) and unit (units)."""
+    """Return pandas DataFrame of entities (gases) and unit (units)."""
     entities = np.array(PR_input['entity'])
     units = np.array(PR_input['unit'])
     entity_unit = {}
     for A, B in zip(entities, units):
         entity_unit[A] = B
     emissions_units = pd.DataFrame(data=entity_unit, index=[0])
-    # emissions_units = pd.DataFrame(data = {'entity': entities, 'unit': units})
+
     return emissions_units.T
+
 
 # @st.cache
 def load_data(file):
+    """Load dataset via function allows streamlit caching."""
     return pd.read_csv(file)
+
 
 # Load PRIMAP DataSet
 PR_input = load_data('./data/PRIMAP-hist_v2.2_19-Jan-2021.csv')
@@ -191,17 +190,17 @@ i = 1
 number_of_series = (len(PR_scenario) * len(PR_country) *
                     len(PR_category) * len(PR_entity))
 
-for scenario in PR_scenario:
-    for country in PR_country:
-        for category in PR_category:
-            for entity in PR_entity:
+for scenario in PR_scenario[0:2]:
+    for country in PR_country[0:2]:
+        for category in PR_category[0:2]:
+            for entity in PR_entity[0:2]:
                 # Visually show how far through the calculation we are
                 name = f'{scenario}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
                 loading_bar = percentage // 2 * '.'
                 print(f'\r{percentage}% {loading_bar} {name}', end='')
                 i += 1
-                
+
                 individual_timeseries = PR_input[
                     (PR_input['scenario'] == scenario) &
                     (PR_input['country'] == country) &
@@ -213,7 +212,7 @@ for scenario in PR_scenario:
                 temp = ETmod(ny, a_params(entity)) @ individual_timeseries
 
 
-
 t2 = dt.datetime.now()
 print(f'\nComputation time: {t2-t1}')
-print(f'Expected total computation time: {(t2-t1) * PR_input.shape[0] / number_of_series}')
+print(f'Expected total computation time: \
+        {(t2-t1) * PR_input.shape[0] / number_of_series}')
