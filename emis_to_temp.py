@@ -4,7 +4,7 @@ import io
 import csv
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import datetime as dt
 # import streamlit as st
 
@@ -151,14 +151,8 @@ PR_input = load_data('./data/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 # print(PR_input.info())
 # st.write(PR_input)
 
-# PR_country = ['EU28', 'USA', 'AOSIS']
-# PR_category = ['IPC1', 'IPC2', 'IPCMAG', 'IPC4']
-# PR_entity = ['CO2', 'CH4', 'N2O']
-# PR_scenario = ['HISTCR']
-
-
 PR_scenario = sorted(list(set(PR_input['scenario'])))
-PR_country = sorted(list(set(PR_input['country'])))[0:20]
+PR_country = sorted(list(set(PR_input['country'])))
 PR_category = sorted(list(set(PR_input['category'])))
 PR_entity = sorted(['CO2', 'CH4', 'N2O'])
 
@@ -171,32 +165,26 @@ PR_entity = sorted(['CO2', 'CH4', 'N2O'])
 # PR_scenario = ['HISTCR']
 
 
-
-
 # Set up timeseries index
 start_year = 1850
 end_year = 2018
 ny = end_year - start_year + 1
-tim2 = np.arange(ny) + 1
+# tim2 = np.arange(ny) + 1
 
 # the GWP_100 factors for [CO2, CH4, N2O] respectively
 gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
 # labels=['Carbon dioxide','Methane','Nitrous Oxide','Total']
 
 PR_year = np.arange(2018 - 1850 + 1) + 1850
-PR_ghgs = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
-PR_co2e = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
+# PR_ghgs = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
+# PR_co2e = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
 
 
-t0 = dt.datetime.now()
-i = 1
 number_of_series = (len(PR_scenario) * len(PR_country) *
                     len(PR_category) * len(PR_entity))
 
-times = []
 
-
-# GOOD METHOD
+# GOOD METHOD FOR STORING TEMP DATA
 column_names = ['scenario', 'country', 'category', 'entity', 'unit']
 column_names.extend([str(i) for i in PR_year])
 # We could just compute temps for each emissions series in the deepest part
@@ -205,17 +193,22 @@ column_names.extend([str(i) for i in PR_year])
 # a new dataframe with an extra row each time, which gets slowww. (.append()
 # is in that sense immutable). So we need a better method.
 # For speed, use csvwriter to add data to an in memory csv object, then use
-# pandas to read the csv we create. This is twice as fast as simply appending.
+# pandas to read the csv we create. This is twice as fast as simply appending
+# (which also ~linearly increases over time as dataframgets larger).
 # Credits to: https://stackoverflow.com/questions/41888080/python-efficient-way-to-add-rows-to-dataframe/48287388
 output = io.StringIO()
 csv_writer = csv.DictWriter(output, fieldnames=column_names)
 csv_writer.writeheader()
-# csv_writer.writerow(column_names)
 
-# BAD METHOD
-PR_temp = pd.DataFrame(columns=list(PR_input.columns.values))
+# BAD METHOD FOR STORING TEMP DATA
+# PR_temp = pd.DataFrame(columns=list(PR_input.columns.values))
 # st.write(PR_temp)
 
+# Loop over all selected scenarios, countries, categories, and entities.
+# For each combination, calculate the warming impact from the emissions
+# and append this timeseries to the in-memory csv file.
+t0 = dt.datetime.now()
+i = 1
 for scenario in PR_scenario:
     for country in PR_country:
         for category in PR_category:
@@ -250,26 +243,21 @@ for scenario in PR_scenario:
 
                 # GOOD METHOD
                 # Write this dictionary to the in-memory csv file.
-                # csv_writer.writerow(new_row)
+                csv_writer.writerow(new_row)
 
                 # BAD METHOD
-                PR_temp = PR_temp.append(new_row, ignore_index=True)
+                # PR_temp = PR_temp.append(new_row, ignore_index=True)
                 # PR_temp = PR_temp.append(pd.DataFrame(new_row))
 
                 t2 = dt.datetime.now()
-                times.append(t2-t1)
-
-
 t3 = dt.datetime.now()
 print(f'\nComputation time: {t3-t0}')
-print(f'Expected total computation time: \
-        {(t3-t0) * PR_input.shape[0] / number_of_series}')
+# print(f'Expected total computation time: \
+#         {(t3-t0) * PR_input.shape[0] / number_of_series}')
 
-# output.seek(0)  # we need to get back to the start of the StringIO
-# PR_temp = pd.read_csv(output)
+
+output.seek(0)  # we need to get back to the start of the StringIO
+PR_temp = pd.read_csv(output)
 # print('\n\n', PR_temp)
-
-# print(times)
-plt.plot(np.arange(len(times)), [t.microseconds for t in times])
-plt.title(str(np.mean([t.microseconds for t in times])))
-plt.show()
+temp_file = './data/PRIMAP-hist-styled_warming-data.csv'
+PR_temp.to_csv(temp_file)
