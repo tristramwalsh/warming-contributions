@@ -1,7 +1,10 @@
 """Calculate temperatures from PRIMAP emissions."""
 
+import io
+import csv
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 import datetime as dt
 # import streamlit as st
 
@@ -155,7 +158,7 @@ PR_input = load_data('./data/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 
 
 PR_scenario = sorted(list(set(PR_input['scenario'])))
-PR_country = sorted(list(set(PR_input['country'])))
+PR_country = sorted(list(set(PR_input['country'])))[0:20]
 PR_category = sorted(list(set(PR_input['category'])))
 PR_entity = sorted(['CO2', 'CH4', 'N2O'])
 
@@ -167,8 +170,7 @@ PR_entity = sorted(['CO2', 'CH4', 'N2O'])
 # PR_entity = ['CO2', 'CH4', 'N2O']
 # PR_scenario = ['HISTCR']
 
-PR_temp = pd.DataFrame(columns=list(PR_input.columns.values))
-# st.write(PR_temp)
+
 
 
 # Set up timeseries index
@@ -186,20 +188,45 @@ PR_ghgs = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
 PR_co2e = np.zeros([2018 - 1850 + 1, len(PR_category), len(PR_entity)])
 
 
-t1 = dt.datetime.now()
+t0 = dt.datetime.now()
 i = 1
 number_of_series = (len(PR_scenario) * len(PR_country) *
                     len(PR_category) * len(PR_entity))
+
+times = []
+
+
+# GOOD METHOD
+column_names = ['scenario', 'country', 'category', 'entity', 'unit']
+column_names.extend([str(i) for i in PR_year])
+# We could just compute temps for each emissions series in the deepest part
+# of the for loop, and append that to a PR_temps dataframe. The issue there,
+# however is that doing df = df.append() copies the entire dataframe into
+# a new dataframe with an extra row each time, which gets slowww. (.append()
+# is in that sense immutable). So we need a better method.
+# For speed, use csvwriter to add data to an in memory csv object, then use
+# pandas to read the csv we create. This is twice as fast as simply appending.
+# Credits to: https://stackoverflow.com/questions/41888080/python-efficient-way-to-add-rows-to-dataframe/48287388
+output = io.StringIO()
+csv_writer = csv.DictWriter(output, fieldnames=column_names)
+csv_writer.writeheader()
+# csv_writer.writerow(column_names)
+
+# BAD METHOD
+PR_temp = pd.DataFrame(columns=list(PR_input.columns.values))
+# st.write(PR_temp)
 
 for scenario in PR_scenario:
     for country in PR_country:
         for category in PR_category:
             for entity in PR_entity:
-                # Visually show how far through the calculation we are
+                t1 = dt.datetime.now()
+                #  Visually show how far through the calculation we are
                 name = f'{scenario}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
                 loading_bar = percentage // 2 * '.'
-                print(f'\r{percentage}% {loading_bar} {name}', end='')
+                # print(f'\r{percentage}% {loading_bar} {name}', end='')
+                print(f'\r{percentage}% {loading_bar}', end='')
                 i += 1
 
                 individual_timeseries = PR_input[
@@ -212,8 +239,37 @@ for scenario in PR_scenario:
                 # Calculate the warming impact from the individual_series
                 temp = ETmod(ny, a_params(entity)) @ individual_timeseries
 
+                # Create dictionary with the new temp data in
+                new_row = {'scenario': scenario,
+                           'country': country,
+                           'category': category,
+                           'entity': entity,
+                           'unit': 'K'}
+                new_row.update({str(PR_year[i]): temp[i]
+                                for i in range(len(temp))})
 
-t2 = dt.datetime.now()
-print(f'\nComputation time: {t2-t1}')
+                # GOOD METHOD
+                # Write this dictionary to the in-memory csv file.
+                # csv_writer.writerow(new_row)
+
+                # BAD METHOD
+                PR_temp = PR_temp.append(new_row, ignore_index=True)
+                # PR_temp = PR_temp.append(pd.DataFrame(new_row))
+
+                t2 = dt.datetime.now()
+                times.append(t2-t1)
+
+
+t3 = dt.datetime.now()
+print(f'\nComputation time: {t3-t0}')
 print(f'Expected total computation time: \
-        {(t2-t1) * PR_input.shape[0] / number_of_series}')
+        {(t3-t0) * PR_input.shape[0] / number_of_series}')
+
+# output.seek(0)  # we need to get back to the start of the StringIO
+# PR_temp = pd.read_csv(output)
+# print('\n\n', PR_temp)
+
+# print(times)
+plt.plot(np.arange(len(times)), [t.microseconds for t in times])
+plt.title(str(np.mean([t.microseconds for t in times])))
+plt.show()
