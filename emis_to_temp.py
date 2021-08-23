@@ -222,32 +222,40 @@ for scenario in PR_scenario:
                 print(f'\r{percentage}% {loading_bar}', end='')
                 i += 1
 
-                individual_timeseries = PR_input[
+                df_timeseries = PR_input[
                     (PR_input['scenario'] == scenario) &
                     (PR_input['country'] == country) &
                     (PR_input['category'] == category) &
                     (PR_input['entity'] == entity)
-                    ].transpose().loc['1850':].values.squeeze() / 1.e6
+                    ].transpose().loc['1850':]
 
-                # Calculate the warming impact from the individual_series
-                temp = ETmod(ny, a_params(entity)) @ individual_timeseries
+                # NOTE: PRIMARP doesn't have emissions timeseries for all
+                # combinations of scenario, country, category, entity.
+                # Thereofore proceed only `if` this data is present in PRIMAP
+                # Crucially, not doing this leads to entries of different data
+                # types in the year columns, which prevents pandas doing number
+                # operations on them later on down the line!
+                if not df_timeseries.empty:
+                    arr_timeseries = df_timeseries.values.squeeze() / 1.e6
 
-                # Create dictionary with the new temp data in
-                new_row = {'scenario': scenario,
-                           'country': country,
-                           'category': category,
-                           'entity': entity,
-                           'unit': 'K'}
-                new_row.update({str(PR_year[i]): temp[i]
-                                for i in range(len(temp))})
+                    # Calculate the warming impact from the individual_series
+                    temp = ETmod(ny, a_params(entity)) @ arr_timeseries
 
-                # GOOD METHOD
-                # Write this dictionary to the in-memory csv file.
-                csv_writer.writerow(new_row)
+                    # Create dictionary with the new temp data in
+                    new_row = {'scenario': scenario,
+                               'country': country,
+                               'category': category,
+                               'entity': entity,
+                               'unit': 'K'}
+                    new_row.update({str(PR_year[i]): temp[i]
+                                    for i in range(len(temp))})
+                    # GOOD METHOD
+                    # Write this dictionary to the in-memory csv file.
+                    csv_writer.writerow(new_row)
 
-                # BAD METHOD
-                # PR_temp = PR_temp.append(new_row, ignore_index=True)
-                # PR_temp = PR_temp.append(pd.DataFrame(new_row))
+                    # BAD METHOD
+                    # PR_temp = PR_temp.append(new_row, ignore_index=True)
+                    # PR_temp = PR_temp.append(pd.DataFrame(new_row))
 
                 t2 = dt.datetime.now()
 t3 = dt.datetime.now()
@@ -258,6 +266,6 @@ print(f'\nComputation time: {t3-t0}')
 
 output.seek(0)  # we need to get back to the start of the StringIO
 PR_temp = pd.read_csv(output)
-# print('\n\n', PR_temp)
-temp_file = './data/PRIMAP-hist-styled_warming-data.csv'
-PR_temp.to_csv(temp_file)
+# print(PR_temp.info(verbose=True))
+temp_file = './data/warming-contributions-data_PRIMAP-format.csv'
+PR_temp.to_csv(temp_file, index=False)
