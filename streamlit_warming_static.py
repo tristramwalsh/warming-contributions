@@ -7,6 +7,7 @@ import numpy as np
 import altair as alt
 import matplotlib
 import matplotlib.pyplot as plt
+import pycountry
 
 
 st.set_page_config(
@@ -53,15 +54,69 @@ def colour_range(domain):
 
 @st.cache(show_spinner=False)
 def load_data(file):
-    """Load the dataset; function approach allows streamlit caching."""
-    return pd.read_csv(file)
+    """Load the dataset, and rename codes with human-friendly terms."""
+    # NOTE: function approach allows streamlit caching,
+    df = pd.read_csv(file)
+
+    not_country = ['EARTH', 'ANNEXI', 'NONANNEXI', 'AOSIS',
+                   'BASIC', 'EU28', 'LDC', 'UMBRELLA']
+    iso_country = list(set(df['country']) - set(not_country) - set(['ANT']))
+
+    country_names = {x: pycountry.countries.get(alpha_3=x).name
+                     for x in iso_country}
+    country_names['Netherlands Antilles'] = 'ANT'
+    country_names.update(
+        {'EARTH': 'Aggregated emissions for all countries',
+         'ANNEXI': 'Annex I Parties to the Convention',
+         'NONANNEXI': 'Non-Annex I Parties to the Convention',
+         'AOSIS': 'Alliance of Small Island States',
+         'BASIC': 'BASIC countries (Brazil, South Africa, India, and China',
+         'EU28': 'European Union',
+         'LDC': 'Least Developed Countries',
+         'UMBRELLA': 'Umbrella Group'}
+    )
+
+    df['country'] = df['country'].replace(country_names)
+
+    scenario_names = {'HISTCR': 'Prioritise country-reported data',
+                      'HISTTP': 'Prioritise third-party data'}
+    df['scenario'] = df['scenario'].replace(scenario_names)
+
+    category_names = {
+        'IPCM0EL': 'IPCM0EL: National Total excluding LULUCF',
+        'IPC1': 'IPC1: Energy',
+        'IPC1A': 'IPC1A: Fuel Combustion Activities',
+        'IPC1B': 'IPC1B: Fugitive Emissions from Fuels',
+        'IPC1B1': 'IPC1B1: Solid Fuels',
+        'IPC1B2': 'IPC1B2: Oil and Natural Gas',
+        'IPC1B3': 'IPC1B3: Other Emissions from Energy Production',
+        'IPC1C': 'IPC1C: Carbon Dioxide Transport and Storage (currently no data available)',
+        'IPC2': 'IPC2: Industrial Processes and Product Use (IPPU)',
+        'IPC2A': 'IPC2A: Mineral Industry',
+        'IPC2B': 'IPC2B: Chemical Industry',
+        'IPC2C': 'IPC2C: Metal Industry',
+        'IPC2D': 'IPC2D: Non-Energy Products from Fuels and Solvent Use',
+        'IPC2E': 'IPC2E: Electronics Industry (no data available as the category is only used for fluorinated gases which are only resolved at the level of category IPC2)',
+        'IPC2F': 'IPC2F: Product uses as Substitutes for Ozone Depleting Substances (no data available as the category is only used for fluorinated gases which are only resolved at the level of category IPC2)',
+        'IPC2G': 'IPC2G: Other Product Manufacture and Use',
+        'IPC2H': 'IPC2H: Other',
+        'IPCMAG': 'IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV',
+        'IPC3A': 'IPC3A: Livestock',
+        'IPCMAGELV': 'IPCMAGELV: Agriculture excluding Livestock',
+        'IPC4': 'IPC4: Waste',
+        'IPC5': 'IPC5: Other'}
+    df['category'] = df['category'].replace(category_names)
+
+    return df
 
 
-# Create a text element and let the reader know the data is loading.
-# data_load_state = st.text('Loading data...')
-df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
-# Notify the reader that the data was successfully loaded.
-# data_load_state.text('Loading data...done!')
+st.sidebar.write('## Make a selection')
+d_set = st.sidebar.selectbox('Choose dataset',
+                           ['Emissions', 'Warming Impact'], 1)
+if d_set == 'Emissions':
+    df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
+elif d_set == 'Warming Impact':
+    df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 
 
 ####
@@ -71,33 +126,35 @@ df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 st.sidebar.write('## Make a selection')
 
 scenarios = st.sidebar.selectbox(
-    "Choose scenario",
+    "Choose scenario prioritisation",
     list(set(df['scenario'])),
-    index=list(set(df['scenario'])).index('HISTCR')
+    # index=list(set(df['scenario'])).index('HISTCR')
+    # index=list(set(df['scenario'])).index('Prioritise country-reported data')
 )
 
-not_country = ['EARTH', 'ANNEXI', 'NONANNEXI', 'AOSIS',
-               'BASIC', 'EU28', 'LDC', 'UMBRELLA']
-iso_country = list(set(df['country']) - set(not_country))
+
 countries = st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
     # not_country
     # ['EU28', 'USA', 'IND', 'CHN']
-    ['EU28']
+    ['European Union']
 )
 categories = st.sidebar.multiselect(
-    "Choose sectors",
+    "Choose emissions categories",
     list(set(df['category'])),
-    ['IPC1', 'IPC2', 'IPCMAG', 'IPC4']
-)
+    ['IPC1: Energy',
+     'IPC2: Industrial Processes and Product Use (IPPU)',
+     'IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV',
+     'IPC4: Waste',
+     'IPC5: Other']
 
+)
 entities = st.sidebar.multiselect(
-    "Which gases would you like to consider?",
+    "Choose entities (gases)",
     sorted(list(set(df['entity']))),
     sorted(list(set(df['entity'])))
 )
-
 dis_aggregation = st.sidebar.selectbox(
     "Choose the breakdown to plot",
     ['country', 'category', 'entity'],
