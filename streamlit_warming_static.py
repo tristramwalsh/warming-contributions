@@ -6,6 +6,7 @@ import numpy as np
 import altair as alt
 import matplotlib.pyplot as plt
 
+
 st.set_page_config(
     page_title="Warming Contributions Explorer",
     page_icon="https://images.emojiterra.com/twitter/512px/1f321.png",
@@ -49,6 +50,10 @@ countries = left_filters.multiselect(
     # ['EU28']
 )
 
+not_country = ['EARTH', 'ANNEXI', 'NONANNEXI', 'AOSIS',
+               'BASIC', 'EU28', 'LDC', 'UMBRELLA']
+iso_country = list(set(df['country']) - set(not_country))
+
 categories = right_filters.multiselect(
     "Choose sectors",
     list(set(df['category'])),
@@ -79,44 +84,113 @@ data = df[(df['scenario'] == scenarios) &
           (df['entity'].isin(entities))
           ]
 
-expander = st.expander("View Full Selected Data")
-expander.write(data)
 
-# Select data grouping to use
-grouped_data = data.groupby(dis_aggregation).sum()
 
 # Get time range for plots
-times = np.arange(2018-1850+1)+1850
 year_expander = st.expander("Year Range Selection")
 with year_expander:
     slider_range = st.slider(
         "Plot Date Range", value=[1990, 2018], min_value=1850, max_value=2018)
     offset = st.checkbox(
         f"Offset from your selected start year {slider_range[0]}?", value=True)
-start_index = int(np.where(times == slider_range[0])[0])
-end_index = int(np.where(times == slider_range[1])[0])
-total = np.zeros_like(times, dtype='float64')[start_index:end_index]
-times = times[start_index:end_index]
 
-data_expander = st.expander("View grouped data")
-data_expander.write(grouped_data)
 
-# st.write(list(set(data[dis_aggregation])))
+# Select data grouping to use
+grouped_data = data.groupby(dis_aggregation).sum()
+
+
+alt.renderers.set_embed_options(actions=False)
+# Without this following text it isn't possible to see hover tooltips in the
+# fullscreen version of the plot
+# https://discuss.streamlit.io/t/tool-tips-in-fullscreen-mode-for-charts/6800/10
+st.markdown('<style>#vg-tooltip-element{z-index: 1000051}</style>',
+             unsafe_allow_html=True)
+
+
+# Restrict the data to just that selected by the slider
+grouped_data = (grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])])
+# Add 'total' of data to data.
+grouped_data = grouped_data.T
+grouped_data["TOTAL"] = grouped_data.sum(axis=1)
+grouped_data = grouped_data.T
+
+# If offset selected, subtract temperature at beginning of date range from the
+# rest of the timeseries
+if offset:
+    start_temps = grouped_data[str(slider_range[0])]
+    grouped_data = grouped_data.sub(start_temps, axis='index')
+# Transform from wide data to long data (altair likes long data)
+# total_data = grouped_data
+
+
+
+# Create ALTAIR Plot
+alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
+alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
+
+
+chart_1 = (
+    alt.Chart(alt_data[alt_data[dis_aggregation] != 'TOTAL'])
+       .mark_line(opacity=1)
+       .encode(
+           x=alt.X("year:T", title=None),
+           y=alt.Y("warming:Q", title=f'warming relative to {slider_range[0]} (K)', stack=False),
+           color=dis_aggregation,
+       )
+)
+
+chart_2 = (
+    alt.Chart(alt_data[alt_data[dis_aggregation] == 'TOTAL'])
+       .mark_line(opacity=1, color='black')
+       .encode(
+           x=alt.X("year:T", title=None),
+           y=alt.Y("warming:Q", title=f'warming relative to {slider_range[0]} (K)', stack=False),
+           opacity=alt.Opacity(dis_aggregation, legend=alt.Legend(title="\n"))
+       )
+)
+
+chart = (alt.layer(chart_1, chart_2)
+            .properties(height=500)
+            .configure_legend(orient='top-left')
+            .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
+)
+
+st.altair_chart(chart,
+                use_container_width=True
+                )
+
+
+
+times = [int(time) for time in grouped_data.columns]
+
+
+# Create MATPLOTLIB plot
+
+# times = np.arange(2018-1850+1)+1850
+# start_index = int(np.where(times == slider_range[0])[0])
+# end_index = int(np.where(times == slider_range[1])[0])
+# total = np.zeros_like(times, dtype='float64')
+# times = times[start_index:end_index]
+
+# st.write(grouped_data)
 for x in list(set(data[dis_aggregation])):
-    test_gas = grouped_data.loc[x].values.squeeze()
 
-    if offset:
-        plt.plot(times,
-                 (test_gas-test_gas[start_index])[start_index:end_index],
-                 label=x)
-        total = total + (test_gas-test_gas[start_index])[start_index:end_index]
-        # st.write(total)
-    else:
-        plt.plot(times, test_gas[start_index:end_index], label=x)
-        total = total + (test_gas)[start_index:end_index]
+    line = grouped_data.loc[x].values.squeeze()
+ 
+    plt.plot(times, line, label=x)
+    # if offset:
+    #     plt.plot(times,
+    #              (line-line[start_index])[start_index:end_index],
+    #              label=x)
+    #     total = total + (line-line[start_index])[start_index:end_index]
+    #     # st.write(total)
+    # else:
+    #     plt.plot(times, line[start_index:end_index], label=x)
+    #     total = total + (line)[start_index:end_index]
 
 
-plt.plot(times, total, label='Total', color='black')
+
+plt.plot(times, grouped_data.loc['TOTAL'].values.squeeze(), label='Total', color='black')
 plt.legend()
 
 plt.xlim(slider_range)
@@ -127,3 +201,11 @@ plt.style.use('seaborn-whitegrid')
 # plt.title(f'Contribution to warming\nfrom {aggregated[1]} sectors\nin {aggregated[0]} regions')
 st.pyplot()
 plt.close()
+
+
+
+
+# selected_data_expander = st.expander("View Full Selected Data")
+# selected_data_expander.write(data)
+# grouped_data_expander = st.expander("View grouped data")
+# grouped_data_expander.write(grouped_data)
