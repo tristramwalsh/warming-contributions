@@ -6,11 +6,18 @@ import numpy as np
 import altair as alt
 import matplotlib.pyplot as plt
 
+st.set_page_config(
+    page_title="Warming Contributions Explorer",
+    page_icon="https://images.emojiterra.com/twitter/512px/1f321.png",
+    layout="wide"
+)
 
-"""
-# Contributions to Historical Warming
-*across scenarios, countries, sectors, and the main gases*
-"""
+st.markdown(
+    """
+    # Contributions to Historical Warming
+    *across scenarios, countries, sectors, and the main gases*
+    """
+)
 
 
 @st.cache(show_spinner=False)
@@ -25,7 +32,7 @@ df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 # Notify the reader that the data was successfully loaded.
 # data_load_state.text('Loading data...done!')
 
-st.write('## Pick & Mix')
+st.markdown('## Pick & Mix')
 
 # left_filters, right_filters = st.columns(2)
 
@@ -90,8 +97,7 @@ entities = right_filters.multiselect(
 )
 
 
-
-st.write('## Warming Dataset')
+st.markdown('## Warming Dataset')
 # expander = st.expander("View Data")
 # expander.write(df.head())
 data = df[
@@ -102,6 +108,7 @@ data = df[
             ]
 
 st.write(data)
+# st.table(data)
 # if not aggregation:
     
 # else:
