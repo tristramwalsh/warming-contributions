@@ -4,6 +4,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
+import matplotlib
 import matplotlib.pyplot as plt
 
 
@@ -33,7 +34,7 @@ df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 # Notify the reader that the data was successfully loaded.
 # data_load_state.text('Loading data...done!')
 
-st.markdown('## Pick & Mix')
+st.markdown('## Select from country, sector, and gas')
 
 left_filters, right_filters = st.columns(2)
 
@@ -76,7 +77,9 @@ aggregated = sorted(list(set(['country', 'category', 'entity']) -
                          set([dis_aggregation])))
 
 
-st.markdown('## Warming Dataset')
+"""
+## Explore Warming
+"""
 
 data = df[(df['scenario'] == scenarios) &
           (df['country'].isin(countries)) &
@@ -84,31 +87,31 @@ data = df[(df['scenario'] == scenarios) &
           (df['entity'].isin(entities))
           ]
 
-
-
 # Get time range for plots
 year_expander = st.expander("Year Range Selection")
 with year_expander:
     slider_range = st.slider(
-        "Plot Date Range", value=[1990, 2018], min_value=1850, max_value=2018)
+        "Plot Date Range", value=[1850, 2018], min_value=1850, max_value=2018)
     offset = st.checkbox(
-        f"Offset from your selected start year {slider_range[0]}?", value=True)
+        f"Offset from your selected start year {slider_range[0]}?", value=False)
 
 
 # Select data grouping to use
 grouped_data = data.groupby(dis_aggregation).sum()
 
 
-alt.renderers.set_embed_options(actions=False)
+# alt.renderers.set_embed_options(actions=False)
 # Without this following text it isn't possible to see hover tooltips in the
 # fullscreen version of the plot
 # https://discuss.streamlit.io/t/tool-tips-in-fullscreen-mode-for-charts/6800/10
 st.markdown('<style>#vg-tooltip-element{z-index: 1000051}</style>',
              unsafe_allow_html=True)
 
+# PREPARE DATA
 
 # Restrict the data to just that selected by the slider
 grouped_data = (grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])])
+
 # Add 'total' of data to data.
 grouped_data = grouped_data.T
 grouped_data["TOTAL"] = grouped_data.sum(axis=1)
@@ -119,24 +122,23 @@ grouped_data = grouped_data.T
 if offset:
     start_temps = grouped_data[str(slider_range[0])]
     grouped_data = grouped_data.sub(start_temps, axis='index')
+
+
+# CREATE ALTAIR PLOTS
+
 # Transform from wide data to long data (altair likes long data)
-# total_data = grouped_data
-
-
-
-# Create ALTAIR Plot
 alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
 alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
-
 
 chart_1 = (
     alt.Chart(alt_data[alt_data[dis_aggregation] != 'TOTAL'])
        .mark_line(opacity=1)
        .encode(
            x=alt.X("year:T", title=None),
-           y=alt.Y("warming:Q", title=f'warming relative to {slider_range[0]} (K)', stack=False),
+           y=alt.Y("warming:Q",
+                   title=f'warming relative to {slider_range[0]} (K)'),
            color=dis_aggregation,
-       )
+    )
 )
 
 chart_2 = (
@@ -144,62 +146,49 @@ chart_2 = (
        .mark_line(opacity=1, color='black')
        .encode(
            x=alt.X("year:T", title=None),
-           y=alt.Y("warming:Q", title=f'warming relative to {slider_range[0]} (K)', stack=False),
+           y=alt.Y("warming:Q",
+                   title=f'warming relative to {slider_range[0]} (K)'),
            opacity=alt.Opacity(dis_aggregation, legend=alt.Legend(title="\n"))
-       )
+    )
 )
 
 chart = (alt.layer(chart_1, chart_2)
             .properties(height=500)
             .configure_legend(orient='top-left')
             .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
-)
+         )
 
-st.altair_chart(chart,
-                use_container_width=True
-                )
+st.altair_chart(chart, use_container_width=True)
 
 
+# CREATE MATPLOTLIB PLOTS
+fig, ax = plt.subplots()
+plt.style.use('seaborn-whitegrid')
+# matplotlib.rcParams.update(
+#     {'font.size': 11, 'font.family': 'Roboto', 'font.weight': 'light',
+#      'axes.linewidth': 0.5, 'axes.titleweight': 'regular',
+#      'axes.grid': True, 'grid.linewidth': 0.5,
+#      'grid.color': 'gainsboro',
+#      'figure.dpi': 200, 'figure.figsize': (15, 10),
+#      'figure.titlesize': 17,
+#      'figure.titleweight': 'light',
+#      'legend.frameon': False}
+#                             )
 
 times = [int(time) for time in grouped_data.columns]
 
-
-# Create MATPLOTLIB plot
-
-# times = np.arange(2018-1850+1)+1850
-# start_index = int(np.where(times == slider_range[0])[0])
-# end_index = int(np.where(times == slider_range[1])[0])
-# total = np.zeros_like(times, dtype='float64')
-# times = times[start_index:end_index]
-
-# st.write(grouped_data)
 for x in list(set(data[dis_aggregation])):
-
     line = grouped_data.loc[x].values.squeeze()
- 
-    plt.plot(times, line, label=x)
-    # if offset:
-    #     plt.plot(times,
-    #              (line-line[start_index])[start_index:end_index],
-    #              label=x)
-    #     total = total + (line-line[start_index])[start_index:end_index]
-    #     # st.write(total)
-    # else:
-    #     plt.plot(times, line[start_index:end_index], label=x)
-    #     total = total + (line)[start_index:end_index]
+    ax.plot(times, line, label=x)
 
+ax.plot(times, grouped_data.loc['TOTAL'].values.squeeze(),
+        label='Total', color='black')
 
+ax.legend()
+ax.set_ylabel(f'warming relative to {slider_range[0]} (K)')
+ax.set_xlim(slider_range)
 
-plt.plot(times, grouped_data.loc['TOTAL'].values.squeeze(), label='Total', color='black')
-plt.legend()
-
-plt.xlim(slider_range)
-# plt.ylim(-0.02, 0.06)
-st.set_option('deprecation.showPyplotGlobalUse', False)
-plt.style.use('seaborn-whitegrid')
-
-# plt.title(f'Contribution to warming\nfrom {aggregated[1]} sectors\nin {aggregated[0]} regions')
-st.pyplot()
+st.pyplot(fig)
 plt.close()
 
 
