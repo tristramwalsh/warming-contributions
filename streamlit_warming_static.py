@@ -1,6 +1,7 @@
 """Hello World implementation of streamlit."""
+import seaborn as sns
 import streamlit as st
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import altair as alt
@@ -27,6 +28,23 @@ st.markdown(
     *across scenarios, countries, sectors, and the main gases*
     """
 )
+
+
+def colour_range(domain):
+    """Create colormap with 'TOTAL' black."""
+    if len(domain) > 1:
+        # domain = list(grouped_data.index)
+        # colour_map = plt.get_cmap('viridis')
+        # cols = np.array(list(iter(colour_map(np.linspace(0, 1, len(domain)-1)))))
+        cols = np.array(sns.color_palette('muted', len(domain)-1))
+        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
+                    for i in range(cols.shape[0])]
+        cols_hex.append('#000000')
+    else:
+        cols = np.array(sns.color_palette('muted', len(domain)))
+        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
+                    for i in range(cols.shape[0])]
+    return cols_hex
 
 
 ####
@@ -81,9 +99,9 @@ entities = st.sidebar.multiselect(
 )
 
 dis_aggregation = st.sidebar.selectbox(
-    "Choose the disaggregation that you'd like to view",
+    "Choose the breakdown to plot",
     ['country', 'category', 'entity'],
-    index=['country', 'category', 'entity'].index('country')
+    index=['country', 'category', 'entity'].index('entity')
 )
 aggregated = sorted(list(set(['country', 'category', 'entity']) -
                          set([dis_aggregation])))
@@ -118,10 +136,11 @@ if offset:
     start_temps = grouped_data[str(slider_range[0])]
     grouped_data = grouped_data.sub(start_temps, axis='index')
 
-# Add 'total' of data to data.
-grouped_data = grouped_data.T
-grouped_data["TOTAL"] = grouped_data.sum(axis=1)
-grouped_data = grouped_data.T
+# Add 'total' of data to data
+if grouped_data.shape[0] > 1:
+    grouped_data = grouped_data.T
+    grouped_data["TOTAL"] = grouped_data.sum(axis=1)
+    grouped_data = grouped_data.T
 
 ####
 # CREATE ALTAIR PLOTS
@@ -131,31 +150,26 @@ grouped_data = grouped_data.T
 alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
 alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 
-chart_1 = (
-    alt.Chart(alt_data[alt_data[dis_aggregation] != 'TOTAL'])
+# Create colour mapping that accounts for a black 'TOTAL' line if multiple
+# lines are present
+c_domain = list(grouped_data.index)
+c_range = colour_range(c_domain)
+
+chart_0 = (
+    alt.Chart(alt_data)
        .mark_line(opacity=1)
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
                        title=f'warming relative to {slider_range[0]} (K)'),
-               color=dis_aggregation,
+               color=alt.Color(dis_aggregation,
+                               scale=alt.Scale(domain=c_domain, range=c_range))
                )
+       .properties(height=500)
+       .configure_legend(orient='top-left')
+       .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
 )
-chart_2 = (
-    alt.Chart(alt_data[alt_data[dis_aggregation] == 'TOTAL'])
-       .mark_line(opacity=1, color='gray')
-       .encode(x=alt.X("year:T", title=None),
-               y=alt.Y("warming:Q",
-                       title=f'warming relative to {slider_range[0]} (K)'),
-               opacity=alt.Opacity(
-                   dis_aggregation, legend=alt.Legend(title="\n")),
-               )
-)
-chart = (alt.layer(chart_1, chart_2)
-            .properties(height=500)
-            .configure_legend(orient='top-left')
-            .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
-         )
-st.altair_chart(chart, use_container_width=True)
+
+st.altair_chart(chart_0, use_container_width=True)
 
 
 # # CREATE MATPLOTLIB PLOTS
