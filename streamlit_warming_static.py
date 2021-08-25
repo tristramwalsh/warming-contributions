@@ -34,48 +34,7 @@ df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 
 st.markdown('## Pick & Mix')
 
-# left_filters, right_filters = st.columns(2)
-
-# countries = left_filters.multiselect(
-#     "Choose countries and/or regions",
-#     list(set(df['country'])),
-#     ['EU28', 'USA', 'AOSIS']
-#     # ['EU28']
-# )
-
-# scenarios = left_filters.selectbox(
-#     "Choose scenario",
-#     list(set(df['scenario'])),
-#     index=list(set(df['scenario'])).index('HISTCR')
-# )
-
-# categories = right_filters.multiselect(
-#     "Choose sectors",
-#     list(set(df['category'])),
-#     ['IPC1', 'IPC2', 'IPCMAG', 'IPC4']
-# )
-
-
-# entities = right_filters.multiselect(
-#     "Which gases would you like to consider?",
-#     sorted(list(set(df['entity']))),
-#     sorted(list(set(df['entity'])))
-# )
-
-
-# aggregation = st.multiselect(
-#     "Choose the grouping/s that you'd like",
-#     ['country', 'category', 'entity'],
-#     ['country']
-# )
-
 left_filters, right_filters = st.columns(2)
-
-countries = left_filters.selectbox(
-    "Choose countries and/or regions",
-    list(set(df['country'])),
-    index=list(set(df['country'])).index('EU28')
-)
 
 scenarios = left_filters.selectbox(
     "Choose scenario",
@@ -83,12 +42,18 @@ scenarios = left_filters.selectbox(
     index=list(set(df['scenario'])).index('HISTCR')
 )
 
-categories = right_filters.selectbox(
-    "Choose sectors",
-    list(set(df['category'])),
-    index=list(set(df['category'])).index('IPCM0EL')
+countries = left_filters.multiselect(
+    "Choose countries and/or regions",
+    list(set(df['country'])),
+    ['EU28', 'USA', 'AOSIS']
+    # ['EU28']
 )
 
+categories = right_filters.multiselect(
+    "Choose sectors",
+    list(set(df['category'])),
+    ['IPC1', 'IPC2', 'IPCMAG', 'IPC4']
+)
 
 entities = right_filters.multiselect(
     "Which gases would you like to consider?",
@@ -97,51 +62,59 @@ entities = right_filters.multiselect(
 )
 
 
+dis_aggregation = st.selectbox(
+    "Choose the disaggregation that you'd like to view",
+    ['country', 'category', 'entity'],
+    index=['country', 'category', 'entity'].index('country')
+)
+aggregated = sorted(list(set(['country', 'category', 'entity']) -
+                         set([dis_aggregation])))
+
+
 st.markdown('## Warming Dataset')
-# expander = st.expander("View Data")
-# expander.write(df.head())
-data = df[
-            (df['scenario'] == scenarios) &
-            (df['country'] == countries) &
-            (df['category'] == categories) &
-            (df['entity'].isin(entities))
-            ]
 
-st.write(data)
-# st.table(data)
-# if not aggregation:
-    
-# else:
-#     data = data.groupby(aggregation).sum()
-#     st.write(data)
-# st.write(data.index)
+data = df[(df['scenario'] == scenarios) &
+          (df['country'].isin(countries)) &
+          (df['category'].isin(categories)) &
+          (df['entity'].isin(entities))
+          ]
 
+expander = st.expander("View Full Selected Data")
+expander.write(data)
 
-# st.write('## Test for EU28 emissions')
-test_select = df[
-    (df['scenario'] == scenarios) &
-    (df['country'] == countries) &
-    (df['category'] == categories)
-    ]
-# st.write(test_select)
+# Select data grouping to use
+grouped_data = data.groupby(dis_aggregation).sum()
+
+# Get time range for plots
 times = np.arange(2018-1850+1)+1850
-slider_range = st.slider("Plot Date Range", value=[1990, 2018], min_value=1850, max_value=2018)
-offset = st.checkbox(f"Offset from your selected start year {slider_range[0]}?", value=True)
+year_expander = st.expander("Year Range Selection")
+with year_expander:
+    slider_range = st.slider(
+        "Plot Date Range", value=[1990, 2018], min_value=1850, max_value=2018)
+    offset = st.checkbox(
+        f"Offset from your selected start year {slider_range[0]}?", value=True)
+start_index = int(np.where(times == slider_range[0])[0])
+end_index = int(np.where(times == slider_range[1])[0])
+total = np.zeros_like(times, dtype='float64')[start_index:end_index]
+times = times[start_index:end_index]
 
-index = int(np.where(times == slider_range[0])[0])
-total = np.zeros_like(times, dtype='float64')[index:]
-times = times[index:]
+data_expander = st.expander("View grouped data")
+data_expander.write(grouped_data)
 
-for entity in entities:
-    test_gas = test_select[test_select['entity'] == entity].loc[:, '1850':].values.squeeze()
+# st.write(list(set(data[dis_aggregation])))
+for x in list(set(data[dis_aggregation])):
+    test_gas = grouped_data.loc[x].values.squeeze()
+
     if offset:
-        plt.plot(times, (test_gas-test_gas[index])[index:],
-                 label=entity)
-        total = total + (test_gas-test_gas[index])[index:]
+        plt.plot(times,
+                 (test_gas-test_gas[start_index])[start_index:end_index],
+                 label=x)
+        total = total + (test_gas-test_gas[start_index])[start_index:end_index]
         # st.write(total)
     else:
-        plt.plot(times, test_gas[index:], label=entity)
-        total = total + (test_gas)[index:]
+        plt.plot(times, test_gas[start_index:end_index], label=x)
+        total = total + (test_gas)[start_index:end_index]
+
 
 plt.plot(times, total, label='Total', color='black')
 plt.legend()
@@ -150,6 +123,7 @@ plt.xlim(slider_range)
 # plt.ylim(-0.02, 0.06)
 st.set_option('deprecation.showPyplotGlobalUse', False)
 plt.style.use('seaborn-whitegrid')
-plt.title(f'{countries} contribution to warming in {categories} sector')
+
+# plt.title(f'Contribution to warming\nfrom {aggregated[1]} sectors\nin {aggregated[0]} regions')
 st.pyplot()
 plt.close()
