@@ -348,12 +348,6 @@ colors = ['rgba(246, 51, 102, 0.2)' if t > 0 else 'rgba(58, 213, 203, 0.2)'
           for t in values]
 # values = [abs(t) for t in values]
 
-st.write(labels)
-st.write(sources)
-st.write(targets)
-st.write(values)
-
-
 cs = len(countries) * len(categories)
 sg = len(categories) * len(entities)
 gc = len(entities) * len(countries)
