@@ -50,7 +50,7 @@ def load_data(file):
          'ANNEXI': 'Annex I Parties to the Convention',
          'NONANNEXI': 'Non-Annex I Parties to the Convention',
          'AOSIS': 'Alliance of Small Island States',
-         'BASIC': 'BASIC countries (Brazil, South Africa, India, and China',
+         'BASIC': 'BASIC countries (Brazil, South Africa, India, and China)',
          'EU28': 'European Union',
          'LDC': 'Least Developed Countries',
          'UMBRELLA': 'Umbrella Group'}
@@ -175,8 +175,8 @@ countries = st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
     # not_country
-    # ['EU28', 'USA', 'IND', 'CHN']
-    ['European Union']
+    ['European Union', 'United States', 'Least Developed Countries', 'Alliance of Small Island States', 'BASIC countries (Brazil, South Africa, India, and China)']
+    # ['European Union']
 )
 categories = st.sidebar.multiselect(
     "Choose emissions categories",
@@ -193,7 +193,11 @@ entities = st.sidebar.multiselect(
     sorted(list(set(df['entity']))),
     sorted(list(set(df['entity'])))
 )
-dis_aggregation = st.sidebar.selectbox(
+
+# year_expander = st.expander("Year Range Selection")
+# with year_expander:
+c1, c2 = st.columns([3, 1])
+dis_aggregation = c2.selectbox(
     "Choose the breakdown to plot",
     ['country', 'category', 'entity'],
     index=['country', 'category', 'entity'].index('entity')
@@ -201,14 +205,13 @@ dis_aggregation = st.sidebar.selectbox(
 aggregated = sorted(list(set(['country', 'category', 'entity']) -
                          set([dis_aggregation])))
 
-# year_expander = st.expander("Year Range Selection")
-# with year_expander:
-slider_range = st.slider(
+slider_range = c2.slider(
     "Plot Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
-offset = st.checkbox(
+offset = c2.checkbox(
     f"Calculate warming relative to selected start year {slider_range[0]}?",
     value=True)
-st.markdown("---")
+
+# st.markdown("---")
 
 
 ####
@@ -251,7 +254,8 @@ chart_0 = (
        .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
 )
 
-st.altair_chart(chart_0, use_container_width=True)
+c1.altair_chart(chart_0, use_container_width=True)
+
 
 
 # # CREATE MATPLOTLIB PLOTS
@@ -295,28 +299,7 @@ st.altair_chart(chart_0, use_container_width=True)
 # ####
 # Make Sankey Diagram
 ####
-# fig = go.Figure(data=[go.Sankey(
-#     node=dict(
-#         pad=15,
-#         thickness=20,
-#         line=dict(color='black', width=0.5),
-#         label=['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
-#         color='blue'
-#     ),
-#     link=dict(
-#         source=[0, 1, 0, 2, 3, 3],
-#         target=[2, 3, 3, 4, 4, 5],
-#         value=[8, 4, 2, 8, 4, 2]
-#     )
-# )])
-
-# fig.update_layout(title_text="Basic Sankey Diagram",
-#                   font_size=10)
-# st.plotly_chart(fig)
-
-# Select data
-
-# Group data
+c3, c4 = st.columns([3,1])
 
 # NOTE: We force the offset to the start of the selected date range, so this
 # plot will always show the warming between the two dates in the range. This
@@ -332,7 +315,7 @@ sankey_gc = prepare_data(df, scenarios, countries, categories, entities,
 # snky_xpndr = st.expander('sankey data')
 # snky_xpndr.write(sankey_cs)
 # snky_xpndr.write(sankey_sg)
-middle = st.selectbox('what is in the middle?',
+middle = c4.selectbox('what is in the middle?',
                       ['country', 'category', 'entity'], 1)
 
 labels = countries + categories + entities
@@ -399,4 +382,4 @@ fig = go.Figure(data=[go.Sankey(
 
 sankey_title = f'warming between {slider_range[0]} and {slider_range[1]}'
 fig.update_layout(title_text=sankey_title, font_size=10, height=500)
-st.plotly_chart(fig, use_container_width=True)
+c3.plotly_chart(fig, use_container_width=True)
