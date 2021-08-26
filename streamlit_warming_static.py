@@ -209,21 +209,12 @@ offset = st.checkbox(
     f"Offset from your selected start year {slider_range[0]}?", value=True)
 st.markdown("---")
 
-if offset:
-    warming_label = f'warming caused relative to {slider_range[0]} (K)'
-else:
-    warming_label = f'warming caused relative to 1850 (K)'
 
 ####
 # PREPARE DATA
 ####
 
 # Select data
-
-
-
-
-
 grouped_data = prepare_data(df, scenarios, countries, categories, entities, dis_aggregation, slider_range, offset, True)
 
 
@@ -240,17 +231,21 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 c_domain = list(grouped_data.index)
 c_range = colour_range(c_domain)
 
+if offset:
+    warming_start = slider_range[0]
+else:
+    warming_start = 1850
 
 chart_0 = (
     alt.Chart(alt_data)
        .mark_line(opacity=1)
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
-                       title=warming_label),
+                       title=f'warming relative to {warming_start} (K)'),
                color=alt.Color(dis_aggregation,
                                scale=alt.Scale(domain=c_domain, range=c_range))
                )
-       .properties(height=500)
+    #    .properties(height=500)
        .configure_legend(orient='top-left')
        .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
 )
@@ -322,14 +317,22 @@ st.altair_chart(chart_0, use_container_width=True)
 
 # Group data
 
+# NOTE: We force the offset to the start of the selected date range, so this
+# plot will always show the warming between the two dates in the range. This
+# seems like intuitive behaviour. Therefore, the offset only applies to the
+# line chart to change the relateive start date for that...
 sankey_cs = prepare_data(df, scenarios, countries, categories, entities,
-                         ['country', 'category'], slider_range, offset, False)
+                         ['country', 'category'], slider_range, True, False)
 sankey_sg = prepare_data(df, scenarios, countries, categories, entities,
-                         ['category', 'entity'], slider_range, offset, False)
+                         ['category', 'entity'], slider_range, True, False)
+sankey_gc = prepare_data(df, scenarios, countries, categories, entities,
+                         ['entity', 'country'], slider_range, True, False)
 
-snky_xpndr = st.expander('sankey data')
-snky_xpndr.write(sankey_cs)
-snky_xpndr.write(sankey_sg)
+# snky_xpndr = st.expander('sankey data')
+# snky_xpndr.write(sankey_cs)
+# snky_xpndr.write(sankey_sg)
+middle = st.selectbox('what is in the middle?',
+                      ['country', 'category', 'entity'], 1)
 
 labels = countries + categories + entities
 sources, targets, values = [], [], []
@@ -349,21 +352,50 @@ for s in categories:
             values.append(sankey_sg.loc[(s, g), str(slider_range[1])])
         except:
             values.append(0)
+for g in entities:
+    for c in countries:
+        sources.append(labels.index(g))
+        targets.append(labels.index(c))
+        try:
+            values.append(sankey_gc.loc[(g, c), str(slider_range[1])])
+        except:
+            values.append(0)
+# colors = ['red' if t > 0 else 'blue' for t in values]
+# values = [abs(t) for t in values]
+
+cs = len(countries) * len(categories)
+sg = len(categories) * len(entities)
+gc = len(entities) * len(countries)
+
+if middle == 'country':
+    sources = sources[:cs] + sources[-gc:]
+    targets = targets[:cs] + targets[-gc:]
+    values = values[:cs] + values[-gc:]
+elif middle == 'category':
+    sources = sources[:cs+sg]
+    targets = targets[:cs+sg]
+    values = values[:cs+sg]
+elif middle == 'entity':
+    sources = sources[cs:]
+    targets = targets[cs:]
+    values = values[cs:]
 
 fig = go.Figure(data=[go.Sankey(
     node=dict(
-        pad=15,
-        thickness=20,
-        line=dict(color='black', width=0.5),
+        pad=30,
+        thickness=10,
+        line=dict(color='black', width=0.0),
         label=labels,
-        color='blue'
+        # color='blue'
     ),
     link=dict(
         source=sources,
         target=targets,
-        value=values
+        value=values,
+        # color=colors 
     )
 )])
 
-fig.update_layout(title_text=warming_label, font_size=10, height=500)
+sankey_title = f'warming between {slider_range[0]} and {slider_range[1]}'
+fig.update_layout(title_text=sankey_title, font_size=10, height=500)
 st.plotly_chart(fig, use_container_width=True)
