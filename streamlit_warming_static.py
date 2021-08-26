@@ -344,8 +344,15 @@ for g in entities:
             values.append(sankey_gc.loc[(g, c), str(slider_range[1])])
         except:
             values.append(0)
-# colors = ['red' if t > 0 else 'blue' for t in values]
+colors = ['rgba(246, 51, 102, 0.2)' if t > 0 else 'rgba(58, 213, 203, 0.2)'
+          for t in values]
 # values = [abs(t) for t in values]
+
+st.write(labels)
+st.write(sources)
+st.write(targets)
+st.write(values)
+
 
 cs = len(countries) * len(categories)
 sg = len(categories) * len(entities)
@@ -355,14 +362,17 @@ if middle == 'country':
     sources = sources[:cs] + sources[-gc:]
     targets = targets[:cs] + targets[-gc:]
     values = values[:cs] + values[-gc:]
+    colors = colors[:cs] + colors[-gc:]
 elif middle == 'category':
     sources = sources[:cs+sg]
     targets = targets[:cs+sg]
     values = values[:cs+sg]
+    colors = colors[:cs+sg]
 elif middle == 'entity':
     sources = sources[cs:]
     targets = targets[cs:]
     values = values[cs:]
+    colors = colors[cs:]
 
 fig = go.Figure(data=[go.Sankey(
     node=dict(
@@ -376,7 +386,7 @@ fig = go.Figure(data=[go.Sankey(
         source=sources,
         target=targets,
         value=values,
-        # color=colors 
+        color=colors
     )
 )])
 
