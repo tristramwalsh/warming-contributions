@@ -32,59 +32,6 @@ st.markdown(
 )
 
 
-def prepare_data(df, scenarios, countries, categories, entities,
-                 dis_aggregation, slider_range, offset, include_total):
-    data = df[(df['scenario'] == scenarios) &
-              (df['country'].isin(countries)) &
-              (df['category'].isin(categories)) &
-              (df['entity'].isin(entities))]
-
-    # Group data
-    grouped_data = data.groupby(dis_aggregation).sum()
-
-    # Restrict the data to just that selected by the slider
-    grouped_data = grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])]
-
-    # If offset selected, subtract temperature at beginning of date range from the
-    # rest of the timeseries
-    if offset:
-        start_temps = grouped_data[str(slider_range[0])]
-        grouped_data = grouped_data.sub(start_temps, axis='index')
-
-    # Add 'SUM' of data to data, if there are multiple lines
-    if grouped_data.shape[0] > 1 and include_total is True:
-        grouped_data = grouped_data.T
-        grouped_data["SUM"] = grouped_data.sum(axis=1)
-        grouped_data = grouped_data.T
-    
-    return grouped_data
-
-
-def colour_range(domain):
-    """Create colormap with 'SUM' black."""
-    cm = 'bright'
-    if len(domain) > 1:
-        # domain = list(grouped_data.index)
-        # colour_map = plt.get_cmap('viridis')
-        # cols = np.array(list(iter(
-        #   colour_map(np.linspace(0, 1, len(domain)-1)))))
-        cols = np.array(sns.color_palette(cm, len(domain)-1))
-        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
-                    for i in range(cols.shape[0])]
-        # Final item in index is 'SUM'; add 'black' to range for this
-        cols_hex.append('#000000')
-
-    else:
-        cols = np.array(sns.color_palette(cm, len(domain)))
-        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
-                    for i in range(cols.shape[0])]
-    return cols_hex
-
-
-####
-# LOAD DATA
-####
-
 @st.cache(show_spinner=False)
 def load_data(file):
     """Load the dataset, and rename codes with human-friendly terms."""
@@ -149,7 +96,60 @@ def load_data(file):
     return df
 
 
+def prepare_data(df, scenarios, countries, categories, entities,
+                 dis_aggregation, slider_range, offset, include_total):
+    data = df[(df['scenario'] == scenarios) &
+              (df['country'].isin(countries)) &
+              (df['category'].isin(categories)) &
+              (df['entity'].isin(entities))]
+
+    # Group data
+    grouped_data = data.groupby(dis_aggregation).sum()
+
+    # Restrict the data to just that selected by the slider
+    grouped_data = grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])]
+
+    # If offset selected, subtract temperature at beginning of date range from the
+    # rest of the timeseries
+    if offset:
+        start_temps = grouped_data[str(slider_range[0])]
+        grouped_data = grouped_data.sub(start_temps, axis='index')
+
+    # Add 'SUM' of data to data, if there are multiple lines
+    if grouped_data.shape[0] > 1 and include_total is True:
+        grouped_data = grouped_data.T
+        grouped_data["SUM"] = grouped_data.sum(axis=1)
+        grouped_data = grouped_data.T
+    
+    return grouped_data
+
+
+def colour_range(domain):
+    """Create colormap with 'SUM' black."""
+    cm = 'bright'
+    if len(domain) > 1:
+        # domain = list(grouped_data.index)
+        # colour_map = plt.get_cmap('viridis')
+        # cols = np.array(list(iter(
+        #   colour_map(np.linspace(0, 1, len(domain)-1)))))
+        cols = np.array(sns.color_palette(cm, len(domain)-1))
+        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
+                    for i in range(cols.shape[0])]
+        # Final item in index is 'SUM'; add 'black' to range for this
+        cols_hex.append('#000000')
+
+    else:
+        cols = np.array(sns.color_palette(cm, len(domain)))
+        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
+                    for i in range(cols.shape[0])]
+    return cols_hex
+
+
 # st.sidebar.write('## Make a selection')
+
+####
+# LOAD DATA
+####
 d_set = st.sidebar.selectbox('Choose dataset',
                              ['Emissions', 'Warming Impact'], 1)
 if d_set == 'Emissions':
@@ -209,6 +209,11 @@ offset = st.checkbox(
     f"Offset from your selected start year {slider_range[0]}?", value=True)
 st.markdown("---")
 
+if offset:
+    warming_label = f'warming caused relative to {slider_range[0]} (K)'
+else:
+    warming_label = f'warming caused relative to 1850 (K)'
+
 ####
 # PREPARE DATA
 ####
@@ -235,12 +240,13 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 c_domain = list(grouped_data.index)
 c_range = colour_range(c_domain)
 
+
 chart_0 = (
     alt.Chart(alt_data)
        .mark_line(opacity=1)
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
-                       title=f'warming relative to {slider_range[0]} (K)'),
+                       title=warming_label),
                color=alt.Color(dis_aggregation,
                                scale=alt.Scale(domain=c_domain, range=c_range))
                )
@@ -321,6 +327,10 @@ sankey_cs = prepare_data(df, scenarios, countries, categories, entities,
 sankey_sg = prepare_data(df, scenarios, countries, categories, entities,
                          ['category', 'entity'], slider_range, offset, False)
 
+snky_xpndr = st.expander('sankey data')
+snky_xpndr.write(sankey_cs)
+snky_xpndr.write(sankey_sg)
+
 labels = countries + categories + entities
 sources, targets, values = [], [], []
 for c in countries:
@@ -331,7 +341,6 @@ for c in countries:
             values.append(sankey_cs.loc[(c, s), str(slider_range[1])])
         except:
             values.append(0)
-
 for s in categories:
     for g in entities:
         sources.append(labels.index(s))
@@ -356,6 +365,5 @@ fig = go.Figure(data=[go.Sankey(
     )
 )])
 
-fig.update_layout(title_text="Basic Sankey Diagram",
-                  font_size=10)
+fig.update_layout(title_text=warming_label, font_size=10, height=500)
 st.plotly_chart(fig, use_container_width=True)
