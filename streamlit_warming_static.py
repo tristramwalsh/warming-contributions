@@ -124,12 +124,27 @@ def prepare_data(df, scenarios, countries, categories, entities,
     return grouped_data
 
 
-def colour_range(domain):
+def colour_range(domain, include_total, variable):
     """Create colormap with 'SUM' black."""
-    cm = 'bright'
-    if len(domain) > 1:
+    if variable == 'country':
+        cm = 'pastel'
+        # cm = 'bright'
+        # cm = 'winter'
+        # cm= 'rainbow'
+    elif variable == 'category':
+        cm = 'Set1'
+        # cm = 'autumn'
+        # cm = "pastel"
+    elif variable == 'entity':
+        # cm = 'flare'
+        cm = 'cool'
+        # cm = 'viridis'
+        # cm = 'muted'
+        
+    
+    if len(domain) > 1 and include_total is True:
         # domain = list(grouped_data.index)
-        # colour_map = plt.get_cmap('viridis')
+        # colour_map = plt.get_cmap(cm)
         # cols = np.array(list(iter(
         #   colour_map(np.linspace(0, 1, len(domain)-1)))))
         cols = np.array(sns.color_palette(cm, len(domain)-1))
@@ -171,14 +186,14 @@ scenarios = st.sidebar.selectbox(
 
 st.sidebar.write('---')
 
-countries = st.sidebar.multiselect(
+countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
     # not_country
     ['European Union', 'United States', 'Least Developed Countries', 'Alliance of Small Island States', 'BASIC countries (Brazil, South Africa, India, and China)']
     # ['European Union']
-)
-categories = st.sidebar.multiselect(
+))
+categories = sorted(st.sidebar.multiselect(
     "Choose emissions categories",
     list(set(df['category'])),
     ['IPC1: Energy',
@@ -187,12 +202,12 @@ categories = st.sidebar.multiselect(
      'IPC4: Waste',
      'IPC5: Other']
 
-)
-entities = st.sidebar.multiselect(
+))
+entities = sorted(st.sidebar.multiselect(
     "Choose entities (gases)",
     sorted(list(set(df['entity']))),
     sorted(list(set(df['entity'])))
-)
+))
 
 # year_expander = st.expander("Year Range Selection")
 # with year_expander:
@@ -219,7 +234,8 @@ offset = c2.checkbox(
 ####
 
 # Select data
-grouped_data = prepare_data(df, scenarios, countries, categories, entities, dis_aggregation, slider_range, offset, True)
+grouped_data = prepare_data(df, scenarios, countries, categories, entities,
+                            dis_aggregation, slider_range, offset, False)
 
 
 ####
@@ -232,20 +248,24 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 
 # Create colour mapping that accounts for a black 'SUM' line if multiple
 # lines are present
-c_domain = list(grouped_data.index)
-c_range = colour_range(c_domain)
+# Note, sorting this here, means it matches the order returned by the
+# (sorted) output form the selection widgets; som colours for plots match.
+c_domain = sorted(list(grouped_data.index))
+c_range = colour_range(c_domain, False, dis_aggregation)
 
 if offset:
     warming_start = slider_range[0]
 else:
     warming_start = 1850
-
+c1.subheader(f'warming relative to {warming_start} (K)')
 chart_0 = (
     alt.Chart(alt_data)
-       .mark_line(opacity=1)
+       .mark_area(opacity=0.5)
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
-                       title=f'warming relative to {warming_start} (K)'),
+                    #    title=f'warming relative to {warming_start} (K)',
+                    #    stack=None
+                       ),
                color=alt.Color(dis_aggregation,
                                scale=alt.Scale(domain=c_domain, range=c_range))
                )
@@ -255,7 +275,6 @@ chart_0 = (
 )
 
 c1.altair_chart(chart_0, use_container_width=True)
-
 
 
 # # CREATE MATPLOTLIB PLOTS
@@ -315,10 +334,12 @@ sankey_gc = prepare_data(df, scenarios, countries, categories, entities,
 # snky_xpndr = st.expander('sankey data')
 # snky_xpndr.write(sankey_cs)
 # snky_xpndr.write(sankey_sg)
-middle = c4.selectbox('what is in the middle?',
+middle = c4.selectbox('Choose the focused variable',
                       ['country', 'category', 'entity'], 1)
-
 labels = countries + categories + entities
+node_colors = (colour_range(countries, False, 'country') +
+               colour_range(categories, False, 'category') +
+               colour_range(entities, False, 'entity'))
 sources, targets, values = [], [], []
 for c in countries:
     for s in categories:
@@ -344,8 +365,10 @@ for g in entities:
             values.append(sankey_gc.loc[(g, c), str(slider_range[1])])
         except:
             values.append(0)
-colors = ['rgba(246, 51, 102, 0.2)' if t > 0 else 'rgba(58, 213, 203, 0.2)'
-          for t in values]
+
+flow_colors = ['rgba(246, 51, 102, 0.8)' if t > 0
+               else 'rgba(58, 213, 203, 0.8)'
+               for t in values]
 values = [abs(t) for t in values]
 
 cs = len(countries) * len(categories)
@@ -356,34 +379,37 @@ if middle == 'country':
     sources = sources[:cs] + sources[-gc:]
     targets = targets[:cs] + targets[-gc:]
     values = values[:cs] + values[-gc:]
-    colors = colors[:cs] + colors[-gc:]
+    flow_colors = flow_colors[:cs] + flow_colors[-gc:]
 elif middle == 'category':
     sources = sources[:cs+sg]
     targets = targets[:cs+sg]
     values = values[:cs+sg]
-    colors = colors[:cs+sg]
+    flow_colors = flow_colors[:cs+sg]
 elif middle == 'entity':
     sources = sources[cs:]
     targets = targets[cs:]
     values = values[cs:]
-    colors = colors[cs:]
+    flow_colors = flow_colors[cs:]
 
 fig = go.Figure(data=[go.Sankey(
     node=dict(
-        pad=30,
-        thickness=10,
+        pad=40,
+        thickness=20,
         line=dict(color='black', width=0.0),
         label=labels,
+        color = node_colors
         # color='blue'
     ),
     link=dict(
         source=sources,
         target=targets,
         value=values,
-        color=colors
+        color=flow_colors
     )
 )])
 
 sankey_title = f'warming between {slider_range[0]} and {slider_range[1]}'
-fig.update_layout(title_text=sankey_title, font_size=10, height=500)
-c3.plotly_chart(fig, use_container_width=True)
+c3.subheader(sankey_title)
+fig.update_layout(font_size=10, height=500)
+c3.plotly_chart(fig, use_container_width=True,
+                config=dict({'displayModeBar': False}))
