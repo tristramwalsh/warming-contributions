@@ -44,6 +44,7 @@ def colour_range(domain):
                     for i in range(cols.shape[0])]
         # Final item in index is 'TOTAL'; add 'black' to range for this
         cols_hex.append('#000000')
+
     else:
         cols = np.array(sns.color_palette(cm, len(domain)))
         cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
@@ -119,7 +120,7 @@ def load_data(file):
     return df
 
 
-st.sidebar.write('## Make a selection')
+# st.sidebar.write('## Make a selection')
 d_set = st.sidebar.selectbox('Choose dataset',
                              ['Emissions', 'Warming Impact'], 1)
 if d_set == 'Emissions':
@@ -132,8 +133,6 @@ elif d_set == 'Warming Impact':
 # SELECT SUBSETS OF DATA
 ####
 
-st.sidebar.write('## Make a selection')
-
 scenarios = st.sidebar.selectbox(
     "Choose scenario prioritisation",
     list(set(df['scenario'])),
@@ -141,6 +140,7 @@ scenarios = st.sidebar.selectbox(
     # index=list(set(df['scenario'])).index('Prioritise country-reported data')
 )
 
+st.sidebar.write('---')
 
 countries = st.sidebar.multiselect(
     "Choose countries and/or regions",
@@ -178,7 +178,7 @@ slider_range = st.slider(
     "Plot Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
 offset = st.checkbox(
     f"Offset from your selected start year {slider_range[0]}?", value=True)
-
+st.markdown("---")
 
 ####
 # PREPARE DATA
