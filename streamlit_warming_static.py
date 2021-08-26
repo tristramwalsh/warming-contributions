@@ -7,6 +7,7 @@ import numpy as np
 import altair as alt
 import matplotlib
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import pycountry
 
 
@@ -31,8 +32,36 @@ st.markdown(
 )
 
 
+def prepare_data(df, scenarios, countries, categories, entities,
+                 dis_aggregation, slider_range, offset, include_total):
+    data = df[(df['scenario'] == scenarios) &
+              (df['country'].isin(countries)) &
+              (df['category'].isin(categories)) &
+              (df['entity'].isin(entities))]
+
+    # Group data
+    grouped_data = data.groupby(dis_aggregation).sum()
+
+    # Restrict the data to just that selected by the slider
+    grouped_data = grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])]
+
+    # If offset selected, subtract temperature at beginning of date range from the
+    # rest of the timeseries
+    if offset:
+        start_temps = grouped_data[str(slider_range[0])]
+        grouped_data = grouped_data.sub(start_temps, axis='index')
+
+    # Add 'SUM' of data to data, if there are multiple lines
+    if grouped_data.shape[0] > 1 and include_total is True:
+        grouped_data = grouped_data.T
+        grouped_data["SUM"] = grouped_data.sum(axis=1)
+        grouped_data = grouped_data.T
+    
+    return grouped_data
+
+
 def colour_range(domain):
-    """Create colormap with 'TOTAL' black."""
+    """Create colormap with 'SUM' black."""
     cm = 'bright'
     if len(domain) > 1:
         # domain = list(grouped_data.index)
@@ -42,7 +71,7 @@ def colour_range(domain):
         cols = np.array(sns.color_palette(cm, len(domain)-1))
         cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
                     for i in range(cols.shape[0])]
-        # Final item in index is 'TOTAL'; add 'black' to range for this
+        # Final item in index is 'SUM'; add 'black' to range for this
         cols_hex.append('#000000')
 
     else:
@@ -185,28 +214,13 @@ st.markdown("---")
 ####
 
 # Select data
-data = df[(df['scenario'] == scenarios) &
-          (df['country'].isin(countries)) &
-          (df['category'].isin(categories)) &
-          (df['entity'].isin(entities))]
 
-# Group data
-grouped_data = data.groupby(dis_aggregation).sum()
 
-# Restrict the data to just that selected by the slider
-grouped_data = grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])]
 
-# If offset selected, subtract temperature at beginning of date range from the
-# rest of the timeseries
-if offset:
-    start_temps = grouped_data[str(slider_range[0])]
-    grouped_data = grouped_data.sub(start_temps, axis='index')
 
-# Add 'total' of data to data
-if grouped_data.shape[0] > 1:
-    grouped_data = grouped_data.T
-    grouped_data["TOTAL"] = grouped_data.sum(axis=1)
-    grouped_data = grouped_data.T
+
+grouped_data = prepare_data(df, scenarios, countries, categories, entities, dis_aggregation, slider_range, offset, True)
+
 
 ####
 # CREATE ALTAIR PLOTS
@@ -216,7 +230,7 @@ if grouped_data.shape[0] > 1:
 alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
 alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 
-# Create colour mapping that accounts for a black 'TOTAL' line if multiple
+# Create colour mapping that accounts for a black 'SUM' line if multiple
 # lines are present
 c_domain = list(grouped_data.index)
 c_range = colour_range(c_domain)
@@ -239,8 +253,8 @@ st.altair_chart(chart_0, use_container_width=True)
 
 
 # # CREATE MATPLOTLIB PLOTS
-# fig, ax = plt.subplots()
-# plt.style.use('seaborn-whitegrid')
+# # fig, ax = plt.subplots()
+# # plt.style.use('seaborn-whitegrid')
 # # matplotlib.rcParams.update(
 # #     {'font.size': 11, 'font.family': 'Roboto', 'font.weight': 'light',
 # #      'axes.linewidth': 0.5, 'axes.titleweight': 'regular',
@@ -252,24 +266,96 @@ st.altair_chart(chart_0, use_container_width=True)
 # #      'legend.frameon': False}
 # #                             )
 
-# times = [int(time) for time in grouped_data.columns]
+# # times = [int(time) for time in grouped_data.columns]
 
-# for x in list(set(data[dis_aggregation])):
-#     if x == 'TOTAL':
-#         ax.plot(times, grouped_data.loc[x].values.squeeze(),
-#                 label=x, color='black')
-#     else:
-#         ax.plot(times, grouped_data.loc[x].values.squeeze(), label=x)
+# # for x in list(set(data[dis_aggregation])):
+# #     if x == 'SUM':
+# #         ax.plot(times, grouped_data.loc[x].values.squeeze(),
+# #                 label=x, color='black')
+# #     else:
+# #         ax.plot(times, grouped_data.loc[x].values.squeeze(), label=x)
 
-# ax.legend()
-# ax.set_ylabel(f'warming relative to {slider_range[0]} (K)')
-# ax.set_xlim(slider_range)
+# # ax.legend()
+# # ax.set_ylabel(f'warming relative to {slider_range[0]} (K)')
+# # ax.set_xlim(slider_range)
 
-# st.pyplot(fig)
-# plt.close()
+# # st.pyplot(fig)
+# # plt.close()
 
 
-# selected_data_expander = st.expander("View Full Selected Data")
-# selected_data_expander.write(data)
-# grouped_data_expander = st.expander("View grouped data")
-# grouped_data_expander.write(grouped_data)
+# # selected_data_expander = st.expander("View Full Selected Data")
+# # selected_data_expander.write(data)
+# # grouped_data_expander = st.expander("View grouped data")
+# # grouped_data_expander.write(grouped_data)
+
+
+
+# ####
+# Make Sankey Diagram
+####
+# fig = go.Figure(data=[go.Sankey(
+#     node=dict(
+#         pad=15,
+#         thickness=20,
+#         line=dict(color='black', width=0.5),
+#         label=['A1', 'A2', 'B1', 'B2', 'C1', 'C2'],
+#         color='blue'
+#     ),
+#     link=dict(
+#         source=[0, 1, 0, 2, 3, 3],
+#         target=[2, 3, 3, 4, 4, 5],
+#         value=[8, 4, 2, 8, 4, 2]
+#     )
+# )])
+
+# fig.update_layout(title_text="Basic Sankey Diagram",
+#                   font_size=10)
+# st.plotly_chart(fig)
+
+# Select data
+
+# Group data
+
+sankey_cs = prepare_data(df, scenarios, countries, categories, entities,
+                         ['country', 'category'], slider_range, offset, False)
+sankey_sg = prepare_data(df, scenarios, countries, categories, entities,
+                         ['category', 'entity'], slider_range, offset, False)
+
+labels = countries + categories + entities
+sources, targets, values = [], [], []
+for c in countries:
+    for s in categories:
+        sources.append(labels.index(c))
+        targets.append(labels.index(s))
+        try:
+            values.append(sankey_cs.loc[(c, s), str(slider_range[1])])
+        except:
+            values.append(0)
+
+for s in categories:
+    for g in entities:
+        sources.append(labels.index(s))
+        targets.append(labels.index(g))
+        try:
+            values.append(sankey_sg.loc[(s, g), str(slider_range[1])])
+        except:
+            values.append(0)
+
+fig = go.Figure(data=[go.Sankey(
+    node=dict(
+        pad=15,
+        thickness=20,
+        line=dict(color='black', width=0.5),
+        label=labels,
+        color='blue'
+    ),
+    link=dict(
+        source=sources,
+        target=targets,
+        value=values
+    )
+)])
+
+fig.update_layout(title_text="Basic Sankey Diagram",
+                  font_size=10)
+st.plotly_chart(fig, use_container_width=True)
