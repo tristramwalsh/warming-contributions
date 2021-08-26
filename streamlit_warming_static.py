@@ -206,7 +206,8 @@ aggregated = sorted(list(set(['country', 'category', 'entity']) -
 slider_range = st.slider(
     "Plot Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
 offset = st.checkbox(
-    f"Offset from your selected start year {slider_range[0]}?", value=True)
+    f"Calculate warming relative to selected start year {slider_range[0]}?",
+    value=True)
 st.markdown("---")
 
 
