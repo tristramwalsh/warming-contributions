@@ -33,16 +33,19 @@ st.markdown(
 
 def colour_range(domain):
     """Create colormap with 'TOTAL' black."""
+    cm = 'bright'
     if len(domain) > 1:
         # domain = list(grouped_data.index)
         # colour_map = plt.get_cmap('viridis')
-        # cols = np.array(list(iter(colour_map(np.linspace(0, 1, len(domain)-1)))))
-        cols = np.array(sns.color_palette('muted', len(domain)-1))
+        # cols = np.array(list(iter(
+        #   colour_map(np.linspace(0, 1, len(domain)-1)))))
+        cols = np.array(sns.color_palette(cm, len(domain)-1))
         cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
                     for i in range(cols.shape[0])]
+        # Final item in index is 'TOTAL'; add 'black' to range for this
         cols_hex.append('#000000')
     else:
-        cols = np.array(sns.color_palette('muted', len(domain)))
+        cols = np.array(sns.color_palette(cm, len(domain)))
         cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
                     for i in range(cols.shape[0])]
     return cols_hex
@@ -90,14 +93,20 @@ def load_data(file):
         'IPC1B1': 'IPC1B1: Solid Fuels',
         'IPC1B2': 'IPC1B2: Oil and Natural Gas',
         'IPC1B3': 'IPC1B3: Other Emissions from Energy Production',
-        'IPC1C': 'IPC1C: Carbon Dioxide Transport and Storage (currently no data available)',
+        'IPC1C': 'IPC1C: Carbon Dioxide Transport and Storage (currently no\
+                  data available)',
         'IPC2': 'IPC2: Industrial Processes and Product Use (IPPU)',
         'IPC2A': 'IPC2A: Mineral Industry',
         'IPC2B': 'IPC2B: Chemical Industry',
         'IPC2C': 'IPC2C: Metal Industry',
         'IPC2D': 'IPC2D: Non-Energy Products from Fuels and Solvent Use',
-        'IPC2E': 'IPC2E: Electronics Industry (no data available as the category is only used for fluorinated gases which are only resolved at the level of category IPC2)',
-        'IPC2F': 'IPC2F: Product uses as Substitutes for Ozone Depleting Substances (no data available as the category is only used for fluorinated gases which are only resolved at the level of category IPC2)',
+        'IPC2E': 'IPC2E: Electronics Industry (no data available as the\
+                  category is only used for fluorinated gases which are only\
+                  resolved at the level of category IPC2)',
+        'IPC2F': 'IPC2F: Product uses as Substitutes for Ozone Depleting\
+                  Substances (no data available as the category is only used\
+                  for fluorinated gases which are only resolved at the level\
+                  of category IPC2)',
         'IPC2G': 'IPC2G: Other Product Manufacture and Use',
         'IPC2H': 'IPC2H: Other',
         'IPCMAG': 'IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV',
@@ -112,7 +121,7 @@ def load_data(file):
 
 st.sidebar.write('## Make a selection')
 d_set = st.sidebar.selectbox('Choose dataset',
-                           ['Emissions', 'Warming Impact'], 1)
+                             ['Emissions', 'Warming Impact'], 1)
 if d_set == 'Emissions':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
 elif d_set == 'Warming Impact':
