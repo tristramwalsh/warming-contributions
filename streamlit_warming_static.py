@@ -169,12 +169,15 @@ st.sidebar.markdown('# Select Data to Explore')
 side_expand = st.sidebar.expander('Select Core Data')
 d_set = side_expand.selectbox('Choose dataset',
                              ['Emissions', 'Warming Impact'], 1)
+
 if d_set == 'Emissions':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
     # df = load_data(
     # 'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 elif d_set == 'Warming Impact':
     df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
+# elif d_set == 'Upload Own Data':
+#     df = load_data(side_expand.file_uploader('upload emissions'))
 
 
 ####
@@ -197,6 +200,7 @@ countries = sorted(st.sidebar.multiselect(
     list(set(df['country'])),
     # not_country
     ['United Kingdom', 'Italy', 'Germany']
+    # ['United Kingdom']
     # ['European Union',
     #  'United States',
     #  'Least Developed Countries',
@@ -207,6 +211,7 @@ countries = sorted(st.sidebar.multiselect(
 categories = sorted(st.sidebar.multiselect(
     "Choose emissions categories",
     list(set(df['category'])),
+    # ['IPCM0EL: National Total excluding LULUCF']
     ['IPC1: Energy',
      'IPC2: Industrial Processes and Product Use (IPPU)',
      'IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV',
@@ -256,7 +261,8 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 # Note, sorting this here, means it matches the order returned by the
 # (sorted) output form the selection widgets; som colours for plots match.
 c_domain = sorted(list(grouped_data.index))
-if include_sum:
+# if include_sum and len(c_domain) > 1:
+if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
