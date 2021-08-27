@@ -264,7 +264,7 @@ chart_0 = (
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
                        title=None,
-                       stack=None
+                    #    stack=None
                        ),
                color=alt.Color(dis_aggregation,
                                scale=alt.Scale(domain=c_domain, range=c_range))
@@ -405,7 +405,11 @@ elif middle == 'entity':
     values = values[cs:]
     flow_colors = flow_colors[cs:]
 
+# col = 'rgba' + str(matplotlib.colors.to_rgba("#374681"))
+# col
 fig = go.Figure(data=[go.Sankey(
+    valuesuffix="K",
+    textfont=dict(color="rgba(0.5,0.5,0.5,0.9)", size=10),
     node=dict(
         pad=40,
         thickness=20,
@@ -423,10 +427,12 @@ fig = go.Figure(data=[go.Sankey(
     )
 )])
 
-sankey_title = f'warming between {date_range[0]} and {date_range[1]}'
+sankey_title = f'warming between {date_range[0]} and {date_range[1]} (K)'
 c3.subheader(sankey_title)
-fig.update_layout(font_size=10,
-                  height=350,
-                  margin=dict(l=40, r=40, b=20, t=20, pad=4))
+fig.update_layout(
+    # font=dict(size=10),
+    #   font_color=st.get_option('textColor'),
+    height=350,
+    margin=dict(l=40, r=40, b=20, t=20, pad=4))
 c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
