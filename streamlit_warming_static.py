@@ -97,7 +97,7 @@ def load_data(file):
 
 
 def prepare_data(df, scenarios, countries, categories, entities,
-                 dis_aggregation, slider_range, offset, include_total):
+                 dis_aggregation, date_range, offset, include_total):
     data = df[(df['scenario'] == scenarios) &
               (df['country'].isin(countries)) &
               (df['category'].isin(categories)) &
@@ -107,12 +107,12 @@ def prepare_data(df, scenarios, countries, categories, entities,
     grouped_data = data.groupby(dis_aggregation).sum()
 
     # Restrict the data to just that selected by the slider
-    grouped_data = grouped_data.loc[:, str(slider_range[0]):str(slider_range[1])]
+    grouped_data = grouped_data.loc[:, str(date_range[0]):str(date_range[1])]
 
     # If offset selected, subtract temperature at beginning of date range from the
     # rest of the timeseries
     if offset:
-        start_temps = grouped_data[str(slider_range[0])]
+        start_temps = grouped_data[str(date_range[0])]
         grouped_data = grouped_data.sub(start_temps, axis='index')
 
     # Add 'SUM' of data to data, if there are multiple lines
@@ -165,10 +165,14 @@ def colour_range(domain, include_total, variable):
 ####
 # LOAD DATA
 ####
+
+st.sidebar.markdown('# Select data to explore')
+
 d_set = st.sidebar.selectbox('Choose dataset',
                              ['Emissions', 'Warming Impact'], 1)
 if d_set == 'Emissions':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
+    # df = load_data('https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 elif d_set == 'Warming Impact':
     df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 
@@ -176,7 +180,6 @@ elif d_set == 'Warming Impact':
 ####
 # SELECT SUBSETS OF DATA
 ####
-
 scenarios = st.sidebar.selectbox(
     "Choose scenario prioritisation",
     list(set(df['scenario'])),
@@ -185,6 +188,9 @@ scenarios = st.sidebar.selectbox(
 )
 
 st.sidebar.write('---')
+
+date_range = st.sidebar.slider(
+    "Choose Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
 
 countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
@@ -212,6 +218,7 @@ entities = sorted(st.sidebar.multiselect(
 # year_expander = st.expander("Year Range Selection")
 # with year_expander:
 c1, c2 = st.columns([3, 1])
+c2.subheader(' ')
 dis_aggregation = c2.selectbox(
     "Choose the breakdown to plot",
     ['country', 'category', 'entity'],
@@ -220,27 +227,19 @@ dis_aggregation = c2.selectbox(
 aggregated = sorted(list(set(['country', 'category', 'entity']) -
                          set([dis_aggregation])))
 
-slider_range = c2.slider(
-    "Plot Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
 offset = c2.checkbox(
-    f"Calculate warming relative to selected start year {slider_range[0]}?",
+    f"Calculate warming relative to selected start year {date_range[0]}?",
     value=True)
 
 # st.markdown("---")
 
-
 ####
-# PREPARE DATA
+# CREATE ALTAIR PLOTS
 ####
 
 # Select data
 grouped_data = prepare_data(df, scenarios, countries, categories, entities,
-                            dis_aggregation, slider_range, offset, False)
-
-
-####
-# CREATE ALTAIR PLOTS
-####
+                            dis_aggregation, date_range, offset, False)
 
 # Transform from wide data to long data (altair likes long data)
 alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
@@ -253,10 +252,8 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 c_domain = sorted(list(grouped_data.index))
 c_range = colour_range(c_domain, False, dis_aggregation)
 
-if offset:
-    warming_start = slider_range[0]
-else:
-    warming_start = 1850
+warming_start = date_range[0] if offset else 1850
+
 c1.subheader(f'warming relative to {warming_start} (K)')
 chart_0 = (
     alt.Chart(alt_data)
@@ -264,7 +261,8 @@ chart_0 = (
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
                     #    title=f'warming relative to {warming_start} (K)',
-                    #    stack=None
+                       title=None,
+                       stack=None
                        ),
                color=alt.Color(dis_aggregation,
                                scale=alt.Scale(domain=c_domain, range=c_range))
@@ -301,8 +299,8 @@ c1.altair_chart(chart_0, use_container_width=True)
 # #         ax.plot(times, grouped_data.loc[x].values.squeeze(), label=x)
 
 # # ax.legend()
-# # ax.set_ylabel(f'warming relative to {slider_range[0]} (K)')
-# # ax.set_xlim(slider_range)
+# # ax.set_ylabel(f'warming relative to {date_range[0]} (K)')
+# # ax.set_xlim(date_range)
 
 # # st.pyplot(fig)
 # # plt.close()
@@ -319,17 +317,18 @@ c1.altair_chart(chart_0, use_container_width=True)
 # Make Sankey Diagram
 ####
 c3, c4 = st.columns([3,1])
+c4.subheader(' ')
 
 # NOTE: We force the offset to the start of the selected date range, so this
 # plot will always show the warming between the two dates in the range. This
 # seems like intuitive behaviour. Therefore, the offset only applies to the
 # line chart to change the relateive start date for that...
 sankey_cs = prepare_data(df, scenarios, countries, categories, entities,
-                         ['country', 'category'], slider_range, True, False)
+                         ['country', 'category'], date_range, True, False)
 sankey_sg = prepare_data(df, scenarios, countries, categories, entities,
-                         ['category', 'entity'], slider_range, True, False)
+                         ['category', 'entity'], date_range, True, False)
 sankey_gc = prepare_data(df, scenarios, countries, categories, entities,
-                         ['entity', 'country'], slider_range, True, False)
+                         ['entity', 'country'], date_range, True, False)
 
 # snky_xpndr = st.expander('sankey data')
 # snky_xpndr.write(sankey_cs)
@@ -346,7 +345,7 @@ for c in countries:
         sources.append(labels.index(c))
         targets.append(labels.index(s))
         try:
-            values.append(sankey_cs.loc[(c, s), str(slider_range[1])])
+            values.append(sankey_cs.loc[(c, s), str(date_range[1])])
         except:
             values.append(0)
 for s in categories:
@@ -354,7 +353,7 @@ for s in categories:
         sources.append(labels.index(s))
         targets.append(labels.index(g))
         try:
-            values.append(sankey_sg.loc[(s, g), str(slider_range[1])])
+            values.append(sankey_sg.loc[(s, g), str(date_range[1])])
         except:
             values.append(0)
 for g in entities:
@@ -362,12 +361,13 @@ for g in entities:
         sources.append(labels.index(g))
         targets.append(labels.index(c))
         try:
-            values.append(sankey_gc.loc[(g, c), str(slider_range[1])])
+            values.append(sankey_gc.loc[(g, c), str(date_range[1])])
         except:
             values.append(0)
 
-flow_colors = ['rgba(246, 51, 102, 0.8)' if t > 0
-               else 'rgba(58, 213, 203, 0.8)'
+flow_colors = ['rgba(246, 51, 102, 0.3)' if t > 0
+               else 'rgba(58, 213, 203, 0.3)'
+            #    else '#284960'
                for t in values]
 values = [abs(t) for t in values]
 
@@ -397,19 +397,22 @@ fig = go.Figure(data=[go.Sankey(
         thickness=20,
         line=dict(color='black', width=0.0),
         label=labels,
-        color = node_colors
+        color=node_colors
         # color='blue'
     ),
     link=dict(
         source=sources,
         target=targets,
         value=values,
-        color=flow_colors
+        color=flow_colors,
+        # pad=
     )
 )])
 
-sankey_title = f'warming between {slider_range[0]} and {slider_range[1]}'
+sankey_title = f'warming between {date_range[0]} and {date_range[1]}'
 c3.subheader(sankey_title)
-fig.update_layout(font_size=10, height=500)
+fig.update_layout(font_size=10,
+                #   height=350,
+                  margin=dict(l=40, r=40, b=20, t=20, pad=4))
 c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
