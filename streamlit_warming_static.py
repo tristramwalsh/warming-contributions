@@ -57,8 +57,8 @@ def load_data(file):
 
     df['country'] = df['country'].replace(country_names)
 
-    scenario_names = {'HISTCR': 'Prioritise country-reported data',
-                      'HISTTP': 'Prioritise third-party data'}
+    scenario_names = {'HISTCR': 'Prioritise Country-Reported Data',
+                      'HISTTP': 'Prioritise Third-Party Data'}
     df['scenario'] = df['scenario'].replace(scenario_names)
 
     category_names = {
@@ -164,9 +164,10 @@ def colour_range(domain, include_total, variable):
 # LOAD DATA
 ####
 
-st.sidebar.markdown('# Select data to explore')
+st.sidebar.markdown('# Select Data to Explore')
 
-d_set = st.sidebar.selectbox('Choose dataset',
+side_expand = st.sidebar.expander('Select Core Data')
+d_set = side_expand.selectbox('Choose dataset',
                              ['Emissions', 'Warming Impact'], 1)
 if d_set == 'Emissions':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
@@ -179,14 +180,14 @@ elif d_set == 'Warming Impact':
 ####
 # SELECT SUBSETS OF DATA
 ####
-scenarios = st.sidebar.selectbox(
+scenarios = side_expand.selectbox(
     "Choose scenario prioritisation",
     list(set(df['scenario'])),
     # index=list(set(df['scenario'])).index('HISTCR')
     # index=list(set(df['scenario'])).index('Prioritise country-reported data')
 )
 
-st.sidebar.write('---')
+# st.sidebar.write('---')
 
 date_range = st.sidebar.slider(
     "Choose Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
@@ -241,8 +242,9 @@ offset = c2.checkbox(
 ####
 
 # Select data
+include_sum = True
 grouped_data = prepare_data(df, scenarios, countries, categories, entities,
-                            dis_aggregation, date_range, offset, False)
+                            dis_aggregation, date_range, offset, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
 alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
@@ -253,14 +255,14 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 # Note, sorting this here, means it matches the order returned by the
 # (sorted) output form the selection widgets; som colours for plots match.
 c_domain = sorted(list(grouped_data.index))
-c_range = colour_range(c_domain, False, dis_aggregation)
+c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
 warming_start = date_range[0] if offset else 1850
 
 c1.subheader(f'warming relative to {warming_start} (K)')
 chart_0 = (
     alt.Chart(alt_data)
-       .mark_area(opacity=0.5)
+       .mark_line(opacity=0.9)
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
                        title=None,
@@ -416,6 +418,7 @@ fig = go.Figure(data=[go.Sankey(
         line=dict(color='black', width=0.0),
         label=labels,
         color=node_colors
+        # color=["#42539a" for x in node_colors]
         # color='blue'
     ),
     link=dict(
@@ -425,7 +428,12 @@ fig = go.Figure(data=[go.Sankey(
         color=flow_colors,
         # pad=
     )
-)])
+)],
+    layout=go.Layout(annotations=[
+        go.layout.Annotation(
+            text='blue is cooling<br>red is warming',
+            align='left', showarrow=False, x=0.0, y=1.0)
+    ]))
 
 sankey_title = f'warming between {date_range[0]} and {date_range[1]} (K)'
 c3.subheader(sankey_title)
