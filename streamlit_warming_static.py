@@ -196,11 +196,12 @@ countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
     # not_country
-    ['European Union',
-     'United States',
-     'Least Developed Countries',
-     'Alliance of Small Island States',
-     'BASIC countries (Brazil, South Africa, India, and China)']
+    ['United Kingdom', 'Italy', 'Germany']
+    # ['European Union',
+    #  'United States',
+    #  'Least Developed Countries',
+    #  'Alliance of Small Island States',
+    #  'BASIC countries (Brazil, South Africa, India, and China)']
     # ['European Union']
 ))
 categories = sorted(st.sidebar.multiselect(
@@ -255,6 +256,8 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 # Note, sorting this here, means it matches the order returned by the
 # (sorted) output form the selection widgets; som colours for plots match.
 c_domain = sorted(list(grouped_data.index))
+if include_sum:
+    c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
 warming_start = date_range[0] if offset else 1850
