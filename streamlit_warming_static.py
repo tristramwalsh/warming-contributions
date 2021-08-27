@@ -1,12 +1,11 @@
-"""Hello World implementation of streamlit."""
+"""Streamlit web app exploring pre-calculated (static) warming dataset."""
 import seaborn as sns
 import streamlit as st
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import altair as alt
 import matplotlib
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import pycountry
 
@@ -109,8 +108,8 @@ def prepare_data(df, scenarios, countries, categories, entities,
     # Restrict the data to just that selected by the slider
     grouped_data = grouped_data.loc[:, str(date_range[0]):str(date_range[1])]
 
-    # If offset selected, subtract temperature at beginning of date range from the
-    # rest of the timeseries
+    # If offset selected, subtract temperature at beginning of date range from
+    # the rest of the timeseries
     if offset:
         start_temps = grouped_data[str(date_range[0])]
         grouped_data = grouped_data.sub(start_temps, axis='index')
@@ -120,7 +119,7 @@ def prepare_data(df, scenarios, countries, categories, entities,
         grouped_data = grouped_data.T
         grouped_data["SUM"] = grouped_data.sum(axis=1)
         grouped_data = grouped_data.T
-    
+
     return grouped_data
 
 
@@ -140,8 +139,7 @@ def colour_range(domain, include_total, variable):
         cm = 'cool'
         # cm = 'viridis'
         # cm = 'muted'
-        
-    
+
     if len(domain) > 1 and include_total is True:
         # domain = list(grouped_data.index)
         # colour_map = plt.get_cmap(cm)
@@ -172,7 +170,8 @@ d_set = st.sidebar.selectbox('Choose dataset',
                              ['Emissions', 'Warming Impact'], 1)
 if d_set == 'Emissions':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-    # df = load_data('https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
+    # df = load_data(
+    # 'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 elif d_set == 'Warming Impact':
     df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 
@@ -196,7 +195,11 @@ countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
     # not_country
-    ['European Union', 'United States', 'Least Developed Countries', 'Alliance of Small Island States', 'BASIC countries (Brazil, South Africa, India, and China)']
+    ['European Union',
+     'United States',
+     'Least Developed Countries',
+     'Alliance of Small Island States',
+     'BASIC countries (Brazil, South Africa, India, and China)']
     # ['European Union']
 ))
 categories = sorted(st.sidebar.multiselect(
@@ -260,7 +263,6 @@ chart_0 = (
        .mark_area(opacity=0.5)
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
-                    #    title=f'warming relative to {warming_start} (K)',
                        title=None,
                        stack=None
                        ),
@@ -312,11 +314,10 @@ c1.altair_chart(chart_0, use_container_width=True)
 # # grouped_data_expander.write(grouped_data)
 
 
-
 # ####
 # Make Sankey Diagram
 ####
-c3, c4 = st.columns([3,1])
+c3, c4 = st.columns([3, 1])
 c4.subheader(' ')
 
 # NOTE: We force the offset to the start of the selected date range, so this
@@ -339,35 +340,48 @@ labels = countries + categories + entities
 node_colors = (colour_range(countries, False, 'country') +
                colour_range(categories, False, 'category') +
                colour_range(entities, False, 'entity'))
-sources, targets, values = [], [], []
+sources, targets, values, exceptions = [], [], [], []
 for c in countries:
     for s in categories:
         sources.append(labels.index(c))
         targets.append(labels.index(s))
         try:
             values.append(sankey_cs.loc[(c, s), str(date_range[1])])
-        except:
+        except KeyError:
+            exceptions.append(f'(country): {c} & (category): {s}')
             values.append(0)
+
 for s in categories:
     for g in entities:
         sources.append(labels.index(s))
         targets.append(labels.index(g))
         try:
             values.append(sankey_sg.loc[(s, g), str(date_range[1])])
-        except:
+        except KeyError:
+            exceptions.append(f'(category): {s} & (entity): {g}')
             values.append(0)
+
 for g in entities:
     for c in countries:
         sources.append(labels.index(g))
         targets.append(labels.index(c))
         try:
             values.append(sankey_gc.loc[(g, c), str(date_range[1])])
-        except:
+        except KeyError:
+            exceptions.append(f'(entity): {g} & (country): {c}')
             values.append(0)
+
+if len(exceptions) > 1:
+    exceptions_expander = st.expander('View Exceptions')
+    exceptions_expander.write(
+        'This particular selected subset of the dataset contains ' +
+        'no data for the following combinations:')
+    for exception in exceptions:
+        exceptions_expander.write(exception)
 
 flow_colors = ['rgba(246, 51, 102, 0.3)' if t > 0
                else 'rgba(58, 213, 203, 0.3)'
-            #    else '#284960'
+               # else '#284960'
                for t in values]
 values = [abs(t) for t in values]
 
@@ -412,7 +426,7 @@ fig = go.Figure(data=[go.Sankey(
 sankey_title = f'warming between {date_range[0]} and {date_range[1]}'
 c3.subheader(sankey_title)
 fig.update_layout(font_size=10,
-                #   height=350,
+                  height=350,
                   margin=dict(l=40, r=40, b=20, t=20, pad=4))
 c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
