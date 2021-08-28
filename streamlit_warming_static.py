@@ -97,6 +97,7 @@ def load_data(file):
 
 def prepare_data(df, scenarios, countries, categories, entities,
                  dis_aggregation, date_range, offset, include_total):
+    """Group, time-slice, offset, and calculate sum as required."""
     data = df[(df['scenario'] == scenarios) &
               (df['country'].isin(countries)) &
               (df['category'].isin(categories)) &
@@ -168,7 +169,7 @@ st.sidebar.markdown('# Select Data to Explore')
 
 side_expand = st.sidebar.expander('Select Core Data')
 d_set = side_expand.selectbox('Choose dataset',
-                             ['Emissions', 'Warming Impact'], 1)
+                              ['Emissions', 'Warming Impact'], 1)
 
 if d_set == 'Emissions':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
@@ -275,7 +276,7 @@ chart_0 = (
        .encode(x=alt.X("year:T", title=None),
                y=alt.Y("warming:Q",
                        title=None,
-                    #    stack=None
+                       # stack=None
                        ),
                color=alt.Color(dis_aggregation,
                                scale=alt.Scale(domain=c_domain, range=c_range))
