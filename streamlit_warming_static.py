@@ -440,7 +440,7 @@ fig = go.Figure(data=[go.Sankey(
 )],
     layout=go.Layout(annotations=[
         go.layout.Annotation(
-            text='blue is cooling<br>red is warming',
+            text='- red flow is warming<br>- blue flow is cooling',
             align='left', showarrow=False, x=0.0, y=1.0)
     ]))
 
