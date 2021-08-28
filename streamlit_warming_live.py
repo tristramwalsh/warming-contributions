@@ -315,8 +315,6 @@ elif d_set == 'Warming Impact':
 #     df = load_data(side_expand.file_uploader('upload emissions'))
 elif d_set == 'Live':
     df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-    
-
 
 
 ####
@@ -366,30 +364,15 @@ entities = sorted(st.sidebar.multiselect(
     ['CH4', 'CO2', 'N2O']
 ))
 
-# year_expander = st.expander("Year Range Selection")
-# with year_expander:
-c1, c2 = st.columns([3, 1])
-c2.subheader(' ')
-dis_aggregation = c2.selectbox(
-    "Choose the breakdown to plot",
-    ['country', 'category', 'entity'],
-    index=['country', 'category', 'entity'].index('entity')
-)
-aggregated = sorted(list(set(['country', 'category', 'entity']) -
-                         set([dis_aggregation])))
-
-offset = c2.checkbox(
-    f"Calculate warming relative to selected start year {date_range[0]}?",
-    value=True)
-
-# st.markdown("---")
-
 
 ####
 # IF 'LIVE' DATA SELECTED, CALCULATE TEMPERATURES
 ####
 
 if d_set == 'Live':
+    # the GWP_100 factors for [CO2, CH4, N2O] respectively
+    gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
+
     emis_to_calculate = df[
                     (df['scenario'] == scenarios) &
                     (df['country'].isin(countries)) &
@@ -400,9 +383,14 @@ if d_set == 'Live':
     ny = 2018 - 1850 + 1
     PR_year = np.arange(2018 - 1850 + 1) + 1850
     column_names.extend([str(i) for i in PR_year])
-    output = io.StringIO()
-    csv_writer = csv.DictWriter(output, fieldnames=column_names)
-    csv_writer.writeheader()
+    # Create in memory virtual csv to write temperatures to
+    output_T = io.StringIO()
+    csv_writer_T = csv.DictWriter(output_T, fieldnames=column_names)
+    csv_writer_T.writeheader()
+    # Create in memory virtual csv to write GWP to
+    output_GWP = io.StringIO()
+    csv_writer_GWP = csv.DictWriter(output_GWP, fieldnames=column_names)
+    csv_writer_GWP.writeheader()
 
     t1 = dt.datetime.now()
 
@@ -430,6 +418,7 @@ if d_set == 'Live':
                 # types in the year columns, which prevents pandas doing number
                 # operations on them later on down the line!
                 if not df_timeseries.empty:
+                    # FIRST compute temperatures for warming virtual csv
                     arr_timeseries = df_timeseries.values.squeeze() / 1.e6
 
                     # Calculate the warming impact from the individual_series
@@ -443,29 +432,98 @@ if d_set == 'Live':
                                'unit': 'K'}
                     new_row.update({str(PR_year[i]): temp[i]
                                     for i in range(len(temp))})
-                    # GOOD METHOD
                     # Write this dictionary to the in-memory csv file.
-                    csv_writer.writerow(new_row)
+                    csv_writer_T.writerow(new_row)
 
-                    # BAD METHOD
-                    # PR_temp = PR_temp.append(new_row, ignore_index=True)
-                    # PR_temp = PR_temp.append(pd.DataFrame(new_row))
+                    # SECOND compute GWP for GWP virtual csv
+                    GWP = df_timeseries.values.squeeze() / 1.e6 * gwp[entity]
+                    new_row = {'scenario': scenarios,
+                               'country': country,
+                               'category': category,
+                               'entity': entity,
+                               'unit': 'GWP GtC CO2-e yr-1'}
+                    new_row.update({str(PR_year[i]): GWP[i]
+                                    for i in range(len(GWP))})
+                    csv_writer_GWP.writerow(new_row)
 
     t2 = dt.datetime.now()
     st.sidebar.write(f'calculation time: *{t2-t1}*')
-    output.seek(0)  # we need to get back to the start of the StringIO
-    df = pd.read_csv(output)
+
+    output_T.seek(0)  # we need to get back to the start of the StringIO
+    df = pd.read_csv(output_T)
+    output_GWP.seek(0)  # we need to get back to the start of the StringIO
+    df_GWP = pd.read_csv(output_GWP)
+
     # Just being paranoid about data leaking between user interactsions (ie 
     # ending up with data duplications, if each subsequent data selection adds
     # on top of the existing StringIO in memory virtual csv)
-    output = io.StringIO()
+    output_T = io.StringIO()
+    output_GWP = io.StringIO()
 
 
 ####
 # CREATE ALTAIR PLOTS
 ####
 
-# Select data
+# year_expander = st.expander("Year Range Selection")
+# with year_expander:
+c1a, c1b, c2 = st.columns([1.75, 1.75, 1])
+c2.subheader(' ')
+dis_aggregation = c2.selectbox(
+    "Choose the breakdown to plot",
+    ['country', 'category', 'entity'],
+    index=['country', 'category', 'entity'].index('entity')
+)
+aggregated = sorted(list(set(['country', 'category', 'entity']) -
+                         set([dis_aggregation])))
+
+offset = c2.checkbox(
+    f"Calculate warming relative to selected start year {date_range[0]}?",
+    value=True)
+
+# CREATE EMISSIONS PLOT
+include_sum = True
+grouped_data_GWP = prepare_data(df_GWP,
+                                scenarios, countries, categories, entities,
+                                dis_aggregation, date_range, False,
+                                include_sum)
+# Transform from wide data to long data (altair likes long data)
+alt_data = grouped_data_GWP.T.reset_index().melt(id_vars=["index"])
+alt_data = alt_data.rename(columns={"index": "year", 'value': 'GWP'})
+
+# Create colour mapping that accounts for a black 'SUM' line if multiple
+# lines are present
+# Note, sorting this here, means it matches the order returned by the
+# (sorted) output_T form the selection widgets; som colours for plots match.
+c_domain = sorted(list(grouped_data_GWP.index))
+# if include_sum and len(c_domain) > 1:
+if 'SUM' in c_domain:
+    c_domain.append(c_domain.pop(c_domain.index('SUM')))
+c_range = colour_range(c_domain, include_sum, dis_aggregation)
+
+warming_start = date_range[0] if offset else 1850
+
+chart_1a = (
+    alt.Chart(alt_data)
+       .mark_line(opacity=0.9)
+       .encode(x=alt.X("year:T", title=None),
+               y=alt.Y("GWP:Q",
+                       title=None,
+                       # stack=None
+                       ),
+               color=alt.Color(dis_aggregation,
+                               scale=alt.Scale(domain=c_domain, range=c_range))
+               )
+    #    .properties(height=500)
+       .configure_legend(orient='top-left')
+       .encode(tooltip=[(dis_aggregation + ':N'), 'GWP:Q'])
+)
+# c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
+c1a.subheader(f'emissions using GWP_100')
+c1a.altair_chart(chart_1a, use_container_width=True)
+
+
+# CREATE WARMING PLOT
 include_sum = True
 grouped_data = prepare_data(df, scenarios, countries, categories, entities,
                             dis_aggregation, date_range, offset, include_sum)
@@ -477,7 +535,7 @@ alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
 # Create colour mapping that accounts for a black 'SUM' line if multiple
 # lines are present
 # Note, sorting this here, means it matches the order returned by the
-# (sorted) output form the selection widgets; som colours for plots match.
+# (sorted) output_T form the selection widgets; som colours for plots match.
 c_domain = sorted(list(grouped_data.index))
 # if include_sum and len(c_domain) > 1:
 if 'SUM' in c_domain:
@@ -486,8 +544,7 @@ c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
 warming_start = date_range[0] if offset else 1850
 
-c1.subheader(f'warming relative to {warming_start} (K)')
-chart_0 = (
+chart_1b = (
     alt.Chart(alt_data)
        .mark_line(opacity=0.9)
        .encode(x=alt.X("year:T", title=None),
@@ -502,8 +559,8 @@ chart_0 = (
        .configure_legend(orient='top-left')
        .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
 )
-
-c1.altair_chart(chart_0, use_container_width=True)
+c1b.subheader(f'warming relative to {warming_start} (K)')
+c1b.altair_chart(chart_1b, use_container_width=True)
 
 
 # # CREATE MATPLOTLIB PLOTS
@@ -546,7 +603,7 @@ c1.altair_chart(chart_0, use_container_width=True)
 # ####
 # Make Sankey Diagram
 ####
-c3, c4 = st.columns([3, 1])
+c3, c4 = st.columns([3.5, 1])
 c4.subheader(' ')
 
 # NOTE: We force the offset to the start of the selected date range, so this
