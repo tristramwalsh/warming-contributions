@@ -79,7 +79,7 @@ def FTmod(nyr, a):
 
 
 # @numba.jit(nopython=True, parallel=True)  # This didn't help
-@st.cache(show_spinner=False)
+# @st.cache(show_spinner=False)
 def ETmod(nyr, a):
     """Create linear operator to convert emissions to warming."""
     Tcal = np.zeros((nyr, nyr))
@@ -108,7 +108,7 @@ def ETmod(nyr, a):
 
 
 # @numba.jit(nopython=True)  # This didn't help...
-@st.cache(show_spinner=False)
+# @st.cache(show_spinner=False)
 def a_params(gas):
     """Return the AR5 model parameter sets, in units GtCO2."""
     # First set up AR5 model parameters,
