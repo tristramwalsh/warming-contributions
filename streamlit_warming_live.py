@@ -553,8 +553,15 @@ chart_1a = (
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
 c1a.subheader('emissions using GWP_100')
 c1a.altair_chart(chart_1a, use_container_width=True)
+# c1a.metric(f'sum of emissions between {date_range[0]}-{date_range[1]} (GWP100)',
+#            f"{grouped_data_GWP.loc['SUM'].sum():.2E}")
+
+if 'SUM' in grouped_data_GWP.index:
+    value = grouped_data_GWP.loc['SUM'].sum()
+else:
+    value = grouped_data_GWP.sum(axis=1).values[0]
 c1a.metric(f'sum of emissions between {date_range[0]}-{date_range[1]} (GWP100)',
-           f"{grouped_data_GWP.loc['SUM'].sum():.2E}")
+           f'{value:.2E}',)
 
 
 # CREATE WARMING PLOT
@@ -595,9 +602,13 @@ chart_1b = (
 )
 c1b.subheader(f'warming relative to {warming_start} (K)')
 c1b.altair_chart(chart_1b, use_container_width=True)
+
+if 'SUM' in grouped_data.index:
+    value = grouped_data.loc['SUM', str(date_range[1])]
+else:
+    value = grouped_data[str(date_range[1])].values[0]
 c1b.metric(f'sum of warming between {warming_start}-{date_range[1]} (K)',
-           f"{grouped_data.loc['SUM', str(date_range[1])]:.2E}",
-           delta_color="normal")
+           f'{value:.2E}',)
 
 # ####
 # Make Sankey Diagram
