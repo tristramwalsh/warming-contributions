@@ -240,7 +240,7 @@ def load_data(file):
     return df
 
 
-# @st.cache(show_spinner=False, suppress_st_warning=True)
+@st.cache(show_spinner=False, suppress_st_warning=True)
 def calc(df, scenarios, countries, categories, entities,
          future_toggle, future_non_co2_rate, future_co2_zero_year):
     """Calculate warming impact, and GWP emissions, for given selection."""
@@ -462,10 +462,12 @@ elif d_set == 'Live':
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?', value=False)
-# if future_toggle:
-future_non_co2_rate = future_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
-future_co2_zero_year = future_expand.slider('Net Zero CO2 Emissions Year', 2025, 2100, 2050)
-
+if future_toggle:
+    future_non_co2_rate = future_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
+    future_co2_zero_year = future_expand.slider('Net Zero CO2 Emissions Year', 2025, 2100, 2050)
+else:
+    future_non_co2_rate = None
+    future_co2_zero_year = None
 
 scenarios = side_expand.selectbox(
     "Choose scenario prioritisation",
