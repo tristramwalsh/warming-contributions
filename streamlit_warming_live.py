@@ -2,7 +2,6 @@
 import io
 import csv
 import datetime as dt
-from numpy.core.numeric import ones_like
 # import numba
 import seaborn as sns
 import streamlit as st
@@ -30,7 +29,7 @@ st.markdown('<style>#vg-tooltip-element{z-index: 1000051}</style>',
 
 st.markdown(
     """
-    # Contributions to Historical Warming
+    # Contributions to Global Warming
     *across scenarios, countries, sectors, and the main gases*
     """
 )
