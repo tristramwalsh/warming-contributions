@@ -2,6 +2,7 @@
 import io
 import csv
 import datetime as dt
+# import numba
 import seaborn as sns
 import streamlit as st
 import pandas as pd
@@ -77,6 +78,8 @@ def FTmod(nyr, a):
     return Tcal
 
 
+# @numba.jit(nopython=True, parallel=True)  # This didn't help
+@st.cache(show_spinner=False)
 def ETmod(nyr, a):
     """Create linear operator to convert emissions to warming."""
     Tcal = np.zeros((nyr, nyr))
@@ -86,21 +89,26 @@ def ETmod(nyr, a):
 
     # loop over thermal response times using AR5 formula for AGTP
     for j in [0, 1]:
+    # for j in numba.prange(2):
         Tcal[:, 0] = Tcal[:, 0] + a[4] * a[13] * \
             a[0] * a[j+10] * (1 - np.exp(-time / a[j+15]))
 
         # loop over gas decay terms using AR5 formula for AGTP
         for i in [1, 2, 3]:
+        # for i in numba.prange(1, 4, 1):
             Tcal[:, 0] = Tcal[:, 0]+a[4]*a[13]*a[i]*a[i+5]*a[j+10] * \
                 (np.exp(-time/a[i+5])-np.exp(-time/a[j+15]))/(a[i+5]-a[j+15])
 
     # build up the rest of the Toeplitz matrix
     for j in range(1, nyr):
+    # for j in numba.prange(1, nyr):
         Tcal[j:nyr, j] = Tcal[0:nyr-j, 0]
 
     return Tcal
 
 
+# @numba.jit(nopython=True)  # This didn't help...
+@st.cache(show_spinner=False)
 def a_params(gas):
     """Return the AR5 model parameter sets, in units GtCO2."""
     # First set up AR5 model parameters,
@@ -149,8 +157,6 @@ def a_params(gas):
         return a_ch4
     elif gas == 'N2O':
         return a_n2o
-    else:
-        print(f'WARNING: {gas} is not a recognised gas')
 
 
 def emissions_units(df):
@@ -227,6 +233,115 @@ def load_data(file):
     df['category'] = df['category'].replace(category_names)
 
     return df
+
+
+@st.cache(show_spinner=False, suppress_st_warning=True)
+def calc(df, scenarios, countries, categories, entities):
+
+    # the GWP_100 factors for [CO2, CH4, N2O] respectively
+    gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
+
+    emis_to_calculate = df[
+                    (df['scenario'] == scenarios) &
+                    (df['country'].isin(countries)) &
+                    (df['category'].isin(categories)) &
+                    (df['entity'].isin(entities))]
+
+    # Prepare the virtual csv files to output calculated things to
+    column_names = ['scenario', 'country', 'category', 'entity', 'unit']
+    ny = 2018 - 1850 + 1
+    PR_year = np.arange(2018 - 1850 + 1) + 1850
+    column_names.extend([str(i) for i in PR_year])
+    # Create in memory virtual csv to write temperatures to
+    output_T = io.StringIO()
+    csv_writer_T = csv.DictWriter(output_T, fieldnames=column_names)
+    csv_writer_T.writeheader()
+    # Create in memory virtual csv to write GWP to
+    output_GWP = io.StringIO()
+    csv_writer_GWP = csv.DictWriter(output_GWP, fieldnames=column_names)
+    csv_writer_GWP.writeheader()
+
+    t1 = dt.datetime.now()
+    # times_calc, times_csv = [], []
+    i = 1
+    number_of_series = len(countries) * len(categories) * len(entities)
+    calc_text = st.sidebar.text('calculating...')
+    for country in countries:
+        for category in categories:
+            for entity in entities:
+
+                #  Visually show how far through the calculation we are
+                # name = f'{scenarios}, {country}, {category}, {entity}'
+                percentage = int(i/number_of_series*100)
+                loading_bar = percentage // 10 * '.'
+                # print(f'\r{percentage}% {loading_bar} {name}', end='')
+                calc_text.text(f'calculating {percentage}% {loading_bar}')
+                i += 1
+
+                df_timeseries = emis_to_calculate[
+                    (emis_to_calculate['country'] == country) &
+                    (emis_to_calculate['category'] == category) &
+                    (emis_to_calculate['entity'] == entity)
+                    ].transpose().loc['1850':]
+
+                # NOTE: PRIMARP doesn't have emissions timeseries for all
+                # combinations of scenario, country, category, entity.
+                # Thereofore proceed only `if` this data is present in PRIMAP
+                # Crucially, not doing this leads to entries of different data
+                # types in the year columns, which prevents pandas doing number
+                # operations on them later on down the line!
+                if not df_timeseries.empty:
+                    # FIRST compute temperatures for warming virtual csv
+                    arr_timeseries = df_timeseries.values.squeeze() / 1.e6
+
+                    # Calculate the warming impact from the individual_series
+                    
+                    # ti = dt.datetime.now()
+                    temp = ETmod(ny, a_params(entity)) @ arr_timeseries
+                    # tj = dt.datetime.now()
+                    # times_calc.append(tj-ti)
+
+                    # Create dictionary with the new temp data in
+                    new_row = {'scenario': scenarios,
+                               'country': country,
+                               'category': category,
+                               'entity': entity,
+                               'unit': 'K'}
+                    new_row.update({str(PR_year[i]): temp[i]
+                                    for i in range(len(temp))})
+                    # Write this dictionary to the in-memory csv file.
+                    csv_writer_T.writerow(new_row)
+
+                    # SECOND compute GWP for GWP virtual csv
+                    GWP = df_timeseries.values.squeeze() / 1.e6 * gwp[entity]
+                    new_row = {'scenario': scenarios,
+                               'country': country,
+                               'category': category,
+                               'entity': entity,
+                               'unit': 'GWP GtC CO2-e yr-1'}
+                    new_row.update({str(PR_year[i]): GWP[i]
+                                    for i in range(len(GWP))})
+                    csv_writer_GWP.writerow(new_row)
+                    # tk = dt.datetime.now()
+                    # times_csv.append(tk-tj)
+
+    t2 = dt.datetime.now()
+    calc_text.text(f'new calculation took: {(t2-t1)}')
+    # st.sidebar.text(f'average calc time: {np.mean(times_calc)}')
+    # st.sidebar.text(f'average csv time: {np.mean(times_csv)}')
+
+    output_T.seek(0)  # we need to get back to the start of the StringIO
+    df_T = pd.read_csv(output_T)
+    output_GWP.seek(0)  # we need to get back to the start of the StringIO
+    df_GWP = pd.read_csv(output_GWP)
+
+    # Just being paranoid about data leaking between user interactsions (ie 
+    # ending up with data duplications, if each subsequent data selection adds
+    # on top of the existing StringIO in memory virtual csv)
+    output_T = io.StringIO()
+    output_GWP = io.StringIO()
+
+    return df_T, df_GWP
 
 
 def prepare_data(df, scenarios, countries, categories, entities,
@@ -337,6 +452,7 @@ countries = sorted(st.sidebar.multiselect(
     list(set(df['country'])),
     # not_country
     ['United Kingdom', 'Italy', 'Germany']
+    # list(set(df['country']))
     # ['United Kingdom']
     # ['European Union',
     #  'United States',
@@ -368,99 +484,8 @@ entities = sorted(st.sidebar.multiselect(
 ####
 # IF 'LIVE' DATA SELECTED, CALCULATE TEMPERATURES
 ####
-
 if d_set == 'Live':
-    calc_text = st.sidebar.text('calculating...')
-    # the GWP_100 factors for [CO2, CH4, N2O] respectively
-    gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
-
-    emis_to_calculate = df[
-                    (df['scenario'] == scenarios) &
-                    (df['country'].isin(countries)) &
-                    (df['category'].isin(categories)) &
-                    (df['entity'].isin(entities))]
-
-    column_names = ['scenario', 'country', 'category', 'entity', 'unit']
-    ny = 2018 - 1850 + 1
-    PR_year = np.arange(2018 - 1850 + 1) + 1850
-    column_names.extend([str(i) for i in PR_year])
-    # Create in memory virtual csv to write temperatures to
-    output_T = io.StringIO()
-    csv_writer_T = csv.DictWriter(output_T, fieldnames=column_names)
-    csv_writer_T.writeheader()
-    # Create in memory virtual csv to write GWP to
-    output_GWP = io.StringIO()
-    csv_writer_GWP = csv.DictWriter(output_GWP, fieldnames=column_names)
-    csv_writer_GWP.writeheader()
-
-    t1 = dt.datetime.now()
-
-    for country in countries:
-        for category in categories:
-            for entity in entities:
-                # #  Visually show how far through the calculation we are
-                # name = f'{scenarios}, {country}, {category}, {entity}'
-                # percentage = int(i/number_of_series*100)
-                # loading_bar = percentage // 2 * '.'
-                # # print(f'\r{percentage}% {loading_bar} {name}', end='')
-                # print(f'\r{percentage}% {loading_bar}', end='')
-                # i += 1
-
-                df_timeseries = emis_to_calculate[
-                    (emis_to_calculate['country'] == country) &
-                    (emis_to_calculate['category'] == category) &
-                    (emis_to_calculate['entity'] == entity)
-                    ].transpose().loc['1850':]
-
-                # NOTE: PRIMARP doesn't have emissions timeseries for all
-                # combinations of scenario, country, category, entity.
-                # Thereofore proceed only `if` this data is present in PRIMAP
-                # Crucially, not doing this leads to entries of different data
-                # types in the year columns, which prevents pandas doing number
-                # operations on them later on down the line!
-                if not df_timeseries.empty:
-                    # FIRST compute temperatures for warming virtual csv
-                    arr_timeseries = df_timeseries.values.squeeze() / 1.e6
-
-                    # Calculate the warming impact from the individual_series
-                    temp = ETmod(ny, a_params(entity)) @ arr_timeseries
-
-                    # Create dictionary with the new temp data in
-                    new_row = {'scenario': scenarios,
-                               'country': country,
-                               'category': category,
-                               'entity': entity,
-                               'unit': 'K'}
-                    new_row.update({str(PR_year[i]): temp[i]
-                                    for i in range(len(temp))})
-                    # Write this dictionary to the in-memory csv file.
-                    csv_writer_T.writerow(new_row)
-
-                    # SECOND compute GWP for GWP virtual csv
-                    GWP = df_timeseries.values.squeeze() / 1.e6 * gwp[entity]
-                    new_row = {'scenario': scenarios,
-                               'country': country,
-                               'category': category,
-                               'entity': entity,
-                               'unit': 'GWP GtC CO2-e yr-1'}
-                    new_row.update({str(PR_year[i]): GWP[i]
-                                    for i in range(len(GWP))})
-                    csv_writer_GWP.writerow(new_row)
-
-    t2 = dt.datetime.now()
-    calc_text.text(f'calculation time: {t2-t1}')
-
-    output_T.seek(0)  # we need to get back to the start of the StringIO
-    df = pd.read_csv(output_T)
-    output_GWP.seek(0)  # we need to get back to the start of the StringIO
-    df_GWP = pd.read_csv(output_GWP)
-
-    # Just being paranoid about data leaking between user interactsions (ie 
-    # ending up with data duplications, if each subsequent data selection adds
-    # on top of the existing StringIO in memory virtual csv)
-    output_T = io.StringIO()
-    output_GWP = io.StringIO()
-
+    df_T, df_GWP = calc(df, scenarios, countries, categories, entities)
 
 ####
 # CREATE ALTAIR PLOTS
@@ -520,13 +545,13 @@ chart_1a = (
        .encode(tooltip=[(dis_aggregation + ':N'), 'GWP:Q'])
 )
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
-c1a.subheader(f'emissions using GWP_100')
+c1a.subheader('emissions using GWP_100')
 c1a.altair_chart(chart_1a, use_container_width=True)
 
 
 # CREATE WARMING PLOT
 include_sum = True
-grouped_data = prepare_data(df, scenarios, countries, categories, entities,
+grouped_data = prepare_data(df_T, scenarios, countries, categories, entities,
                             dis_aggregation, date_range, offset, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
@@ -564,43 +589,6 @@ c1b.subheader(f'warming relative to {warming_start} (K)')
 c1b.altair_chart(chart_1b, use_container_width=True)
 
 
-# # CREATE MATPLOTLIB PLOTS
-# # fig, ax = plt.subplots()
-# # plt.style.use('seaborn-whitegrid')
-# # matplotlib.rcParams.update(
-# #     {'font.size': 11, 'font.family': 'Roboto', 'font.weight': 'light',
-# #      'axes.linewidth': 0.5, 'axes.titleweight': 'regular',
-# #      'axes.grid': True, 'grid.linewidth': 0.5,
-# #      'grid.color': 'gainsboro',
-# #      'figure.dpi': 200, 'figure.figsize': (15, 10),
-# #      'figure.titlesize': 17,
-# #      'figure.titleweight': 'light',
-# #      'legend.frameon': False}
-# #                             )
-
-# # times = [int(time) for time in grouped_data.columns]
-
-# # for x in list(set(data[dis_aggregation])):
-# #     if x == 'SUM':
-# #         ax.plot(times, grouped_data.loc[x].values.squeeze(),
-# #                 label=x, color='black')
-# #     else:
-# #         ax.plot(times, grouped_data.loc[x].values.squeeze(), label=x)
-
-# # ax.legend()
-# # ax.set_ylabel(f'warming relative to {date_range[0]} (K)')
-# # ax.set_xlim(date_range)
-
-# # st.pyplot(fig)
-# # plt.close()
-
-
-# # selected_data_expander = st.expander("View Full Selected Data")
-# # selected_data_expander.write(data)
-# # grouped_data_expander = st.expander("View grouped data")
-# # grouped_data_expander.write(grouped_data)
-
-
 # ####
 # Make Sankey Diagram
 ####
@@ -611,11 +599,11 @@ c4.subheader(' ')
 # plot will always show the warming between the two dates in the range. This
 # seems like intuitive behaviour. Therefore, the offset only applies to the
 # line chart to change the relateive start date for that...
-sankey_cs = prepare_data(df, scenarios, countries, categories, entities,
+sankey_cs = prepare_data(df_T, scenarios, countries, categories, entities,
                          ['country', 'category'], date_range, True, False)
-sankey_sg = prepare_data(df, scenarios, countries, categories, entities,
+sankey_sg = prepare_data(df_T, scenarios, countries, categories, entities,
                          ['category', 'entity'], date_range, True, False)
-sankey_gc = prepare_data(df, scenarios, countries, categories, entities,
+sankey_gc = prepare_data(df_T, scenarios, countries, categories, entities,
                          ['entity', 'country'], date_range, True, False)
 
 # snky_xpndr = st.expander('sankey data')
