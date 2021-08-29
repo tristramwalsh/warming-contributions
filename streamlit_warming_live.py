@@ -2,6 +2,7 @@
 import io
 import csv
 import datetime as dt
+from numpy.core.numeric import ones_like
 # import numba
 import seaborn as sns
 import streamlit as st
@@ -239,8 +240,9 @@ def load_data(file):
     return df
 
 
-@st.cache(show_spinner=False, suppress_st_warning=True)
-def calc(df, scenarios, countries, categories, entities):
+# @st.cache(show_spinner=False, suppress_st_warning=True)
+def calc(df, scenarios, countries, categories, entities,
+         future_toggle, future_non_co2_rate, future_co2_zero_year):
     """Calculate warming impact, and GWP emissions, for given selection."""
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
@@ -253,8 +255,11 @@ def calc(df, scenarios, countries, categories, entities):
 
     # Prepare the virtual csv files to output calculated things to
     column_names = ['scenario', 'country', 'category', 'entity', 'unit']
-    ny = 2018 - 1850 + 1
-    PR_year = np.arange(2018 - 1850 + 1) + 1850
+    ny = future_co2_zero_year - 1850 + 1 if future_toggle else 2018 - 1850 + 1
+    PR_year = np.arange(ny) + 1850
+    # st.write(future_toggle)
+    # st.write('ny', ny)
+    # st.write('PR_year', len(PR_year), PR_year)
     column_names.extend([str(i) for i in PR_year])
     # Create in memory virtual csv to write temperatures to
     output_T = io.StringIO()
@@ -298,6 +303,19 @@ def calc(df, scenarios, countries, categories, entities):
                     # FIRST compute temperatures for warming virtual csv
                     arr_timeseries = df_timeseries.values.squeeze() / 1.e6
 
+                    if future_toggle:
+                        fut_yrs = np.arange(future_co2_zero_year - 2019 + 1) + 2019
+                        if entity == 'CO2':
+                            arr_timeseries = np.append(
+                                arr_timeseries,
+                                np.linspace(arr_timeseries[-1], 0, future_co2_zero_year-2018)
+                                )
+                            
+                        else:
+                            arr_timeseries = np.append(
+                                arr_timeseries,
+                                np.array([arr_timeseries[-1] * (1+future_non_co2_rate)**i for i in fut_yrs-2019])
+                                )
                     # Calculate the warming impact from the individual_series
                     
                     # ti = dt.datetime.now()
@@ -313,11 +331,10 @@ def calc(df, scenarios, countries, categories, entities):
                                'unit': 'K'}
                     new_row.update({str(PR_year[i]): temp[i]
                                     for i in range(len(temp))})
-                    # Write this dictionary to the in-memory csv file.
                     csv_writer_T.writerow(new_row)
 
                     # SECOND compute GWP for GWP virtual csv
-                    GWP = df_timeseries.values.squeeze() / 1.e6 * gwp[entity]
+                    GWP = arr_timeseries * gwp[entity]
                     new_row = {'scenario': scenarios,
                                'country': country,
                                'category': category,
@@ -325,6 +342,7 @@ def calc(df, scenarios, countries, categories, entities):
                                'unit': 'GWP GtC CO2-e yr-1'}
                     new_row.update({str(PR_year[i]): GWP[i]
                                     for i in range(len(GWP))})
+                    # Write this dictionary to the in-memory csv file.
                     csv_writer_GWP.writerow(new_row)
                     # tk = dt.datetime.now()
                     # times_csv.append(tk-tj)
@@ -420,7 +438,7 @@ def colour_range(domain, include_total, variable):
 
 st.sidebar.markdown('# Select Data to Explore')
 
-side_expand = st.sidebar.expander('Select Core Data')
+side_expand = st.sidebar.expander('Core Data')
 d_set = side_expand.selectbox('Choose calculation',
                             #   ['Emissions', 'Warming Impact', 'Live'], 2)
                               ['Live'], 0)
@@ -441,6 +459,14 @@ elif d_set == 'Live':
 ####
 # WIDGETS FOR USERS TO SELECT DATA
 ####
+
+future_expand = st.sidebar.expander('Future Emissions')
+future_toggle = future_expand.checkbox('Explore Future Projections?', value=False)
+# if future_toggle:
+future_non_co2_rate = future_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
+future_co2_zero_year = future_expand.slider('Net Zero CO2 Emissions Year', 2025, 2100, 2050)
+
+
 scenarios = side_expand.selectbox(
     "Choose scenario prioritisation",
     list(set(df['scenario'])),
@@ -451,7 +477,11 @@ scenarios = side_expand.selectbox(
 # st.sidebar.write('---')
 
 date_range = st.sidebar.slider(
-    "Choose Date Range", min_value=1850, max_value=2018, value=[1990, 2018])
+    "Choose Date Range",
+    min_value=1850,
+    max_value=future_co2_zero_year if future_toggle else 2018,
+    value=[1850, future_co2_zero_year] if future_toggle else [1990, 2018]
+    )
 
 countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
@@ -491,7 +521,9 @@ entities = sorted(st.sidebar.multiselect(
 # IF 'LIVE' DATA SELECTED, CALCULATE TEMPERATURES
 ####
 if d_set == 'Live':
-    df_T, df_GWP = calc(df, scenarios, countries, categories, entities)
+    df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
+        future_toggle, future_non_co2_rate, future_co2_zero_year)
+
 
 ####
 # CREATE ALTAIR PLOTS
@@ -738,3 +770,4 @@ fig.update_layout(
     margin=dict(l=40, r=40, b=20, t=20, pad=4))
 c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
+
