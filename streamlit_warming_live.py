@@ -370,6 +370,7 @@ entities = sorted(st.sidebar.multiselect(
 ####
 
 if d_set == 'Live':
+    calc_text = st.sidebar.text('calculating...')
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
 
@@ -447,7 +448,7 @@ if d_set == 'Live':
                     csv_writer_GWP.writerow(new_row)
 
     t2 = dt.datetime.now()
-    st.sidebar.write(f'calculation time: *{t2-t1}*')
+    calc_text.text(f'calculation time: {t2-t1}')
 
     output_T.seek(0)  # we need to get back to the start of the StringIO
     df = pd.read_csv(output_T)
