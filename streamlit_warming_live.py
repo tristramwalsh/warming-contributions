@@ -171,10 +171,12 @@ def emissions_units(df):
     return emissions_units.T
 
 
-@st.cache(show_spinner=False)
+@st.cache(show_spinner=False, suppress_st_warning=True)
 def load_data(file):
     """Load the dataset, and rename codes with human-friendly terms."""
     # NOTE: function approach allows streamlit caching,
+    loading_message = st.sidebar.text('please wait while data initialises')
+
     df = pd.read_csv(file)
 
     not_country = ['EARTH', 'ANNEXI', 'NONANNEXI', 'AOSIS',
@@ -232,12 +234,14 @@ def load_data(file):
         'IPC5': 'IPC5: Other'}
     df['category'] = df['category'].replace(category_names)
 
+    loading_message.empty()
+
     return df
 
 
 @st.cache(show_spinner=False, suppress_st_warning=True)
 def calc(df, scenarios, countries, categories, entities):
-
+    """Calculate warming impact, and GWP emissions, for given selection."""
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
 
@@ -273,9 +277,9 @@ def calc(df, scenarios, countries, categories, entities):
                 #  Visually show how far through the calculation we are
                 # name = f'{scenarios}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
-                loading_bar = percentage // 10 * '.'
+                loading_bar = percentage // 5 * '.' + (20 - percentage // 5) * ' '
                 # print(f'\r{percentage}% {loading_bar} {name}', end='')
-                calc_text.text(f'calculating {percentage}% {loading_bar}')
+                calc_text.text(f'calculating {loading_bar} {percentage}% ')
                 i += 1
 
                 df_timeseries = emis_to_calculate[
@@ -417,20 +421,22 @@ def colour_range(domain, include_total, variable):
 st.sidebar.markdown('# Select Data to Explore')
 
 side_expand = st.sidebar.expander('Select Core Data')
-d_set = side_expand.selectbox('Choose dataset',
-                              ['Emissions', 'Warming Impact', 'Live'], 2)
+d_set = side_expand.selectbox('Choose calculation',
+                            #   ['Emissions', 'Warming Impact', 'Live'], 2)
+                              ['Live'], 0)
 
 if d_set == 'Emissions':
-    df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-    # df = load_data(
-    # 'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
+    # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
+    df = load_data(
+    'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 elif d_set == 'Warming Impact':
     df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
 # elif d_set == 'Upload Own Data':
 #     df = load_data(side_expand.file_uploader('upload emissions'))
 elif d_set == 'Live':
-    df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-
+    # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
+    df = load_data(
+        'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 
 ####
 # WIDGETS FOR USERS TO SELECT DATA
@@ -547,6 +553,8 @@ chart_1a = (
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
 c1a.subheader('emissions using GWP_100')
 c1a.altair_chart(chart_1a, use_container_width=True)
+# c1a.metric(f'total emissions GWP100 between {date_range[0]}-{date_range[1]}',
+#            f"{grouped_data_GWP.loc['SUM'].sum():.2E}")
 
 
 # CREATE WARMING PLOT
@@ -587,7 +595,9 @@ chart_1b = (
 )
 c1b.subheader(f'warming relative to {warming_start} (K)')
 c1b.altair_chart(chart_1b, use_container_width=True)
-
+# c1b.metric(f'total warming between {warming_start}-{date_range[1]}',
+#            f"{grouped_data.loc['SUM', str(date_range[1])]:.2E}",
+#            delta_color="normal")
 
 # ####
 # Make Sankey Diagram
