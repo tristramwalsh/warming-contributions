@@ -365,7 +365,7 @@ def calc(df, scenarios, countries, categories, entities,
 
     return df_T, df_GWP
 
-
+@st.cache(show_spinner=False)
 def prepare_data(df, scenarios, countries, categories, entities,
                  dis_aggregation, date_range, offset, include_total):
     """Group, time-slice, offset, and calculate sum as required."""
@@ -382,7 +382,7 @@ def prepare_data(df, scenarios, countries, categories, entities,
 
     # If offset selected, subtract temperature at beginning of date range from
     # the rest of the timeseries
-    if offset:
+    if offset and not df.empty:
         start_temps = grouped_data[str(date_range[0])]
         grouped_data = grouped_data.sub(start_temps, axis='index')
 
@@ -526,11 +526,14 @@ if d_set == 'Live':
     df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
         future_toggle, future_non_co2_rate, future_co2_zero_year)
 
+# CHECK DATA AVAILABLE
+if prepare_data(df_GWP,scenarios, countries, categories, entities,
+                'country', date_range, False, False).empty:
+    st.warning('No emissions data available for this selection')
 
 ####
 # CREATE ALTAIR PLOTS
 ####
-
 # year_expander = st.expander("Year Range Selection")
 # with year_expander:
 c1a, c1b, c2 = st.columns([1.75, 1.75, 1])
@@ -540,12 +543,13 @@ dis_aggregation = c2.selectbox(
     ['country', 'category', 'entity'],
     index=['country', 'category', 'entity'].index('entity')
 )
-aggregated = sorted(list(set(['country', 'category', 'entity']) -
-                         set([dis_aggregation])))
+# aggregated = sorted(list(set(['country', 'category', 'entity']) -
+#                         set([dis_aggregation])))
 
 offset = c2.checkbox(
     f"Calculate warming relative to selected start year {date_range[0]}?",
     value=True)
+
 
 # CREATE EMISSIONS PLOT
 include_sum = True
@@ -553,6 +557,7 @@ grouped_data_GWP = prepare_data(df_GWP,
                                 scenarios, countries, categories, entities,
                                 dis_aggregation, date_range, False,
                                 include_sum)
+
 # Transform from wide data to long data (altair likes long data)
 alt_data = grouped_data_GWP.T.reset_index().melt(id_vars=["index"])
 alt_data = alt_data.rename(columns={"index": "year", 'value': 'GWP'})
@@ -571,31 +576,31 @@ warming_start = date_range[0] if offset else 1850
 
 chart_1a = (
     alt.Chart(alt_data)
-       .mark_line(opacity=0.9)
-       .encode(x=alt.X("year:T", title=None),
-               y=alt.Y("GWP:Q",
-                       title=None,
-                       # stack=None
-                       ),
-               color=alt.Color(dis_aggregation,
-                               scale=alt.Scale(domain=c_domain, range=c_range))
-               )
+    .mark_line(opacity=0.9)
+    .encode(x=alt.X("year:T", title=None),
+            y=alt.Y("GWP:Q",
+                    title=None,
+                    # stack=None
+                    ),
+            color=alt.Color(dis_aggregation,
+                            scale=alt.Scale(domain=c_domain, range=c_range))
+            )
     #    .properties(height=500)
-       .configure_legend(orient='top-left')
-       .encode(tooltip=[(dis_aggregation + ':N'), 'GWP:Q'])
+    .configure_legend(orient='top-left')
+    .encode(tooltip=[(dis_aggregation + ':N'), 'GWP:Q'])
 )
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
 c1a.subheader('emissions using GWP_100')
 c1a.altair_chart(chart_1a, use_container_width=True)
-# c1a.metric(f'sum of emissions between {date_range[0]}-{date_range[1]} (GWP100)',
-#            f"{grouped_data_GWP.loc['SUM'].sum():.2E}")
 
 if 'SUM' in grouped_data_GWP.index:
     value = grouped_data_GWP.loc['SUM'].sum()
-else:
+elif not grouped_data_GWP.empty:  # for elegent error handling
     value = grouped_data_GWP.sum(axis=1).values[0]
+else:  # also for elegent error handling
+    value = 0
 c1a.metric(f'sum of emissions between {date_range[0]}-{date_range[1]} (GWP100)',
-           f'{value:.2E}',)
+        f'{value:.2E}')
 
 
 # CREATE WARMING PLOT
@@ -621,28 +626,30 @@ warming_start = date_range[0] if offset else 1850
 
 chart_1b = (
     alt.Chart(alt_data)
-       .mark_line(opacity=0.9)
-       .encode(x=alt.X("year:T", title=None),
-               y=alt.Y("warming:Q",
-                       title=None,
-                       # stack=None
-                       ),
-               color=alt.Color(dis_aggregation,
-                               scale=alt.Scale(domain=c_domain, range=c_range))
-               )
+    .mark_line(opacity=0.9)
+    .encode(x=alt.X("year:T", title=None),
+            y=alt.Y("warming:Q",
+                    title=None,
+                    # stack=None
+                    ),
+            color=alt.Color(dis_aggregation,
+                            scale=alt.Scale(domain=c_domain, range=c_range))
+            )
     #    .properties(height=500)
-       .configure_legend(orient='top-left')
-       .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
+    .configure_legend(orient='top-left')
+    .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
 )
 c1b.subheader(f'warming relative to {warming_start} (K)')
 c1b.altair_chart(chart_1b, use_container_width=True)
 
 if 'SUM' in grouped_data.index:
     value = grouped_data.loc['SUM', str(date_range[1])]
-else:
+elif not grouped_data.empty:  # for elegent error handling
     value = grouped_data[str(date_range[1])].values[0]
+else:  # also for elegent error handling
+    value = 0
 c1b.metric(f'sum of warming between {warming_start}-{date_range[1]} (K)',
-           f'{value:.2E}',)
+        f'{value:.2E}',)
 
 # ####
 # Make Sankey Diagram
@@ -655,21 +662,21 @@ c4.subheader(' ')
 # seems like intuitive behaviour. Therefore, the offset only applies to the
 # line chart to change the relateive start date for that...
 sankey_cs = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['country', 'category'], date_range, True, False)
+                        ['country', 'category'], date_range, True, False)
 sankey_sg = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['category', 'entity'], date_range, True, False)
+                        ['category', 'entity'], date_range, True, False)
 sankey_gc = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['entity', 'country'], date_range, True, False)
+                        ['entity', 'country'], date_range, True, False)
 
 # snky_xpndr = st.expander('sankey data')
 # snky_xpndr.write(sankey_cs)
 # snky_xpndr.write(sankey_sg)
 middle = c4.selectbox('Choose the focused variable',
-                      ['country', 'category', 'entity'], 1)
+                    ['country', 'category', 'entity'], 1)
 labels = countries + categories + entities
 node_colors = (colour_range(countries, False, 'country') +
-               colour_range(categories, False, 'category') +
-               colour_range(entities, False, 'entity'))
+            colour_range(categories, False, 'category') +
+            colour_range(entities, False, 'entity'))
 sources, targets, values, exceptions = [], [], [], []
 for c in countries:
     for s in categories:
@@ -710,9 +717,9 @@ if len(exceptions) > 1:
         exceptions_expander.write(exception)
 
 flow_colors = ['rgba(246, 51, 102, 0.3)' if t > 0
-               else 'rgba(58, 213, 203, 0.3)'
-               # else '#284960'
-               for t in values]
+            else 'rgba(58, 213, 203, 0.3)'
+            # else '#284960'
+            for t in values]
 values = [abs(t) for t in values]
 
 cs = len(countries) * len(categories)
