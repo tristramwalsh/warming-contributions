@@ -35,6 +35,7 @@ st.markdown(
 )
 
 
+
 def EFmod(nyr, a):
     """Create linear operator to convert emissions to forcing."""
     Fcal = np.zeros((nyr, nyr))
@@ -576,17 +577,19 @@ warming_start = date_range[0] if offset else 1850
 chart_1a = (
     alt.Chart(alt_data)
     .mark_line(opacity=0.9)
-    .encode(x=alt.X("year:T", title=None),
+    .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
             y=alt.Y("GWP:Q",
                     title=None,
                     # stack=None
                     ),
             color=alt.Color(dis_aggregation,
-                            scale=alt.Scale(domain=c_domain, range=c_range))
+                            scale=alt.Scale(domain=c_domain, range=c_range)),
+            tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
             )
     #    .properties(height=500)
     .configure_legend(orient='top-left')
-    .encode(tooltip=[(dis_aggregation + ':N'), 'GWP:Q'])
+    .configure_axis(grid=False)
+    .configure_view(strokeOpacity=0.0)
 )
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
 c1a.subheader('emissions using GWP_100')
@@ -626,17 +629,19 @@ warming_start = date_range[0] if offset else 1850
 chart_1b = (
     alt.Chart(alt_data)
     .mark_line(opacity=0.9)
-    .encode(x=alt.X("year:T", title=None),
+    .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
             y=alt.Y("warming:Q",
                     title=None,
                     # stack=None
                     ),
             color=alt.Color(dis_aggregation,
-                            scale=alt.Scale(domain=c_domain, range=c_range))
+                            scale=alt.Scale(domain=c_domain, range=c_range)),
+            tooltip=[(dis_aggregation + ':N'), 'warming:Q']
             )
     #    .properties(height=500)
     .configure_legend(orient='top-left')
-    .encode(tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
+    .configure_axis(grid=False)
+    .configure_view(strokeOpacity=0.0)
 )
 c1b.subheader(f'warming relative to {warming_start} (K)')
 c1b.altair_chart(chart_1b, use_container_width=True)
@@ -708,12 +713,12 @@ for g in entities:
             values.append(0)
 
 if len(exceptions) > 1:
-    exceptions_expander = st.expander('View Exceptions')
+    exceptions_expander = st.sidebar.expander('View Exceptions')
     exceptions_expander.write(
         'This particular selected subset of the dataset contains ' +
         'no data for the following combinations:')
     for exception in exceptions:
-        exceptions_expander.write(exception)
+        exceptions_expander.write(f'- {exception}')
 
 flow_colors = ['rgba(246, 51, 102, 0.3)' if t > 0
             else 'rgba(58, 213, 203, 0.3)'
