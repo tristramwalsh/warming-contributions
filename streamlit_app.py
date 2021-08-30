@@ -784,3 +784,134 @@ fig.update_layout(
 c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
 
+
+# about_expander = st.expander('About')
+st.markdown(
+    """
+---
+
+## Introduction
+This app provides a quantitative esimation of contributions to global temperature increase due to emissions from individual greenhouse gases, countries, and emission categories and subsectors.
+
+Make a selection to explore within those groups using the left side bar. The default mode explores historical emissions and their contributions to global temperature change; you can also include and experiment with projections of future emissions.
+
+
+""")
+
+
+st.markdown("""
+## Coverage of emissions and temperature impact
+Emissions of individual greenhouse gases are as reported in the PRIMAP database. [^Gütschow et al 2021]
+
+Temperature change alculations are all based on the linear response model documented in the IPCC's 5th Assessment Report. [^IPCC AR5 WG1 (Myhre et al 2013)]
+
+
+*A note on double counting within selections:* in the 'region' and 'category' multi-selects in the side bar, subgroupings of emissions can be selected alongside their umbrella group; this allows for more granular exploration of the contributions to historical warming, however **double counting is possible if you select both a group and any of its subgroups:** for example, selecting 'IPC1' and 'IPC1A' will double count 'IPC1A' in the calculations; selecting 'European Union' and 'France' will double count 'France' in the calculations.
+
+### Which contributors to temperature change are included
+
+""")
+
+list1, list2 = st.columns(2)
+list1.markdown("""
+#### Categories
+(the main categories and subsector divisions from the IPCC 2006 Guidelines for national greenhouse gas inventories [^IPCC 2006])
+- IPCM0EL: National Total excluding LULUCF
+    - IPC1: Energy
+        - IPC1A: Fuel Combustion Activities
+        - IPC1B: Fugitive Emissions from Fuels
+            - IPC1B1: Solid Fuels
+            - IPC1B2: Oil and Natural Gas
+            - IPC1B3: Other Emissions from Energy Production
+        - IPC1C: Carbon Dioxide Transport and Storage (currently no\
+            data available)
+    - IPC2: Industrial Processes and Product Use (IPPU)
+        - IPC2A: Mineral Industry
+        - IPC2B: Chemical Industry
+        - IPC2C: Metal Industry
+        - IPC2D: Non-Energy Products from Fuels and Solvent Use
+        - IPC2E: Electronics Industry (no data available as the\
+                category is only used for fluorinated gases which are only\
+                resolved at the level of category IPC2)
+        - IPC2F: Product uses as Substitutes for Ozone Depleting\
+                Substances (no data available as the category is only used\
+                for fluorinated gases which are only resolved at the level\
+                of category IPC2)
+        - IPC2G: Other Product Manufacture and Use
+        - IPC2H: Other
+    - IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV
+        - IPC3A: Livestock
+        - IPCMAGELV: Agriculture excluding Livestock
+    - IPC4: Waste
+    - IPC5: Other
+
+""")
+list2.markdown(
+    """
+#### Regions
+- All UNFCCC member states, as well as most non-UNFCCC territories [^ISO 3166-1 alpha-3]
+- Custom regional groupings, including:
+    - Aggregated emissions for all countries
+    - Annex I Parties to the Convention
+    - Non-Annex I Parties to the Convention
+    - Alliance fo Small Island States
+    - BASIC countries (Brazil, South Africa, India, and China)
+    - European Union
+    - Least Developed Countries
+    - Umbrella Group
+
+#### Entities
+(the gases that dominantly contribute to global warming)
+- CO2
+- CH4
+- N2O
+
+#### Reporting Scenarios
+- HISTCR: Prioritise Country-Reported Data
+- HISTTP: Prioritise Third-Party Data
+""")
+
+# st.markdown(
+#     """
+
+# ### What emissions are not included in this app?
+# *A note on the non-inclusion of LULUCF:* land use, land use change, and forestry (LULUCF) emissions are not included due to issues with data consistency; for more on this, [see the note here](http://www.pik-potsdam.de/paris-reality-check/primap-hist/). As such, **warming calculated in this release of the app is due to all CO2, CH4, and N2O emissions excluding LULUCF.**
+
+# *A note on the non-inclusion of the F-gases (HFCs, CFCs, SF6):* the three forcing agents that dominate contributions to global warming are CO2, CH4, N20. The behaviours of these gases, in particular the length of time for which they reside in the atmosphere, is relativelt unambiguous. Emissions of the F-gases are included as aggreage emissions, which cannot be reduced to a single atmospheric lifetime; this introduces uncertainty in how to treat them. While an upcoming release of this app will provide full coverage of the F-gases, their inclusion is not expected to significantly change the warming contributions in the majority of cases.
+
+# *A note on the non-inclusion of natural forcing:*
+st.markdown(
+    """
+---
+
+### Contact
+Warming impact calculated, and app developed and designed by:
+
+**Tristram Walsh** |
+tristram.walsh@ouce.ox.ac.uk |
+Environmental Change Institute |
+University of Oxford
+
+**Myles Allen** |
+myles.allen@ouce.ox.ac.uk |
+Environmental Change Institute |
+University of Oxford
+
+With support from: **4C-europe** (Climate-Carbon Interactions in the Current Century
+
+*Please get in touch with us if you notice issues, suggestions, or would like access to the warming data. Additionally, if you have found this app useful, we'd welcome hearing about where and how you you have used information and insights produced here.*
+""")
+
+st.caption("""
+---
+
+[^Gütschow et al 2021]: Gütschow, J.; Günther, A.; Jeffery, L.; Gieseke, R. (2021): The PRIMAP-hist national historical emissions time series (1850-2018). v2.2. zenodo. Available from https://doi.org/10.5281/zenodo.4479172
+
+[^IPCC AR5 WG1 (Myhre et al 2013)]: Myhre, G., D. Shindell, F.-M. Bréon, W. Collins, J. Fuglestvedt, J. Huang, D. Koch, J.-F. Lamarque, D. Lee, B. Mendoza, T. Nakajima, A. Robock, G. Stephens, T. Takemura and H. Zhang, 2013: Anthropogenic and Natural Radiative Forcing Supplementary Material. In: Climate Change 2013: The Physical Science Basis. Contribution of Working Group I to the Fifth Assessment Report of the Intergovernmental Panel on Climate Change [Stocker, T.F., D. Qin, G.-K. Plattner, M. Tignor, S.K. Allen, J. Boschung, A. Nauels, Y. Xia, V. Bex and P.M. Midgley (eds.)]. Available from https://www.ipcc.ch/report/ar5/wg1/chapter-8sm-anthropogenic-and-natural-radiative-forcing-supplementary-material/
+
+[^IPCC 2006]: Jim Penman (UK), Michael Gytarsky (Russia), Taka Hiraishi (Japan), William Irving (USA), and Thelma Krug (Brazil), (2006) Overview of the IPCC Guidelines for National Greenhouse Gas Inventories. Available from https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/0_Overview/V0_1_Overview.pdf
+
+[^ISO 3166-1 alpha-3]: See https://unstats.un.org/unsd/tradekb/knowledgebase/country-code, and https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3 for more information.
+
+"""
+)
