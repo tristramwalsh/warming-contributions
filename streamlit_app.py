@@ -438,43 +438,48 @@ def colour_range(domain, include_total, variable):
 
 st.sidebar.markdown('# Select Data to Explore')
 
-side_expand = st.sidebar.expander('Core Data')
-d_set = side_expand.selectbox('Choose calculation',
-                            #   ['Emissions', 'Warming Impact', 'Live'], 2)
-                              ['Live'], 0)
+side_expand = st.sidebar.expander('Customise Calculation')
+d_set = side_expand.selectbox('Choose warming model',
+                            #   ['Emissions', 'Warming Impact', 'IPCC AR5 Linear Impulse Response Model'], 2)
+                              ['IPCC AR5 Linear Impulse Response Model'], 0)
 
-if d_set == 'Emissions':
-    # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-    df = load_data(
-    'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
-elif d_set == 'Warming Impact':
-    df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
-# elif d_set == 'Upload Own Data':
-#     df = load_data(side_expand.file_uploader('upload emissions'))
-elif d_set == 'Live':
-    # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-    df = load_data(
+# if d_set == 'Emissions':
+#     # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
+#     df = load_data(
+#     'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
+# elif d_set == 'Warming Impact':
+#     df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
+# # elif d_set == 'Upload Own Data':
+# #     df = load_data(side_expand.file_uploader('upload emissions'))
+# elif d_set == 'IPCC AR5 Linear Impulse Response Model':
+#     # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
+#     df = load_data(
+#         'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
+df = load_data(
         'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 
 ####
 # WIDGETS FOR USERS TO SELECT DATA
 ####
-
-future_expand = st.sidebar.expander('Future Emissions')
-future_toggle = future_expand.checkbox('Explore Future Projections?', value=False)
-if future_toggle:
-    future_non_co2_rate = future_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
-    future_co2_zero_year = future_expand.slider('Net Zero CO2 Emissions Year', 2025, 2100, 2050)
-else:
-    future_non_co2_rate = None
-    future_co2_zero_year = None
-
 scenarios = side_expand.selectbox(
-    "Choose scenario prioritisation",
+    "Choose historical emissions prioritisation",
     list(set(df['scenario'])),
     # index=list(set(df['scenario'])).index('HISTCR')
     # index=list(set(df['scenario'])).index('Prioritise country-reported data')
 )
+
+# side_expand.write('---')
+
+# future_expand = st.sidebar.expander('Future Emissions')
+future_toggle = side_expand.checkbox('Explore Future Projections?', value=False)
+if future_toggle:
+    future_non_co2_rate = side_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
+    future_co2_zero_year = side_expand.slider('Year of achieving net zero CO2 ewomissions', 2025, 2100, 2050)
+else:
+    future_non_co2_rate = None
+    future_co2_zero_year = None
+
+
 
 # st.sidebar.write('---')
 
@@ -514,15 +519,15 @@ entities = sorted(st.sidebar.multiselect(
     "Choose entities (gases)",
     # sorted(list(set(df['entity']))),
     # sorted(list(set(df['entity']))),
-    ['CH4', 'CO2', 'N2O'] if d_set == 'Live' else sorted(list(set(df['entity']))),
+    ['CH4', 'CO2', 'N2O'] if d_set == 'IPCC AR5 Linear Impulse Response Model' else sorted(list(set(df['entity']))),
     ['CH4', 'CO2', 'N2O']
 ))
 
 
 ####
-# IF 'LIVE' DATA SELECTED, CALCULATE TEMPERATURES
+# IF 'IPCC AR5 Linear Impulse Response Model' DATA SELECTED, CALCULATE TEMPERATURES
 ####
-if d_set == 'Live':
+if d_set == 'IPCC AR5 Linear Impulse Response Model':
     df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
         future_toggle, future_non_co2_rate, future_co2_zero_year)
 
