@@ -173,7 +173,7 @@ def a_params(gas):
         return a_n2o
 
 
-def emissions_units(df):
+def PR_emissions_units(df):
     """Return pandas DataFrame of entities (gases) and unit (units)."""
     entities = np.array(df['entity'])
     units = np.array(df['unit'])
@@ -183,6 +183,24 @@ def emissions_units(df):
     emissions_units = pd.DataFrame(data=entity_unit, index=[0])
 
     return emissions_units.T
+
+
+def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
+    exponent_template = "{:0>%d}" % exponent_pad
+    mantissa_template = "{:.%df}" % num_decimals
+    
+    order_of_magnitude = np.floor(np.log10(abs(val)))
+    nearest_lower_third = 3*(order_of_magnitude//3)
+    adjusted_mantissa = val*10**(-nearest_lower_third)
+    adjusted_mantissa_string = mantissa_template.format(adjusted_mantissa)
+    adjusted_exponent_string = "+-"[nearest_lower_third<0] + exponent_template.format(abs(nearest_lower_third))
+
+    if letter:
+        names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m', '+0.0': ' ',
+             '+3.0': ' k', '+6.0': ' M', '+9.0': ' G'}
+        return adjusted_mantissa_string + names[adjusted_exponent_string]
+    else:
+        return adjusted_mantissa_string+"E"+adjusted_exponent_string
 
 
 @st.cache(show_spinner=False, suppress_st_warning=True)
@@ -478,7 +496,7 @@ scenarios = side_expand.selectbox(
     "Choose historical emissions prioritisation",
     list(set(df['scenario'])),
     # index=list(set(df['scenario'])).index('HISTCR')
-    # index=list(set(df['scenario'])).index('Prioritise country-reported data')
+    index=list(set(df['scenario'])).index('Prioritise Country-Reported Data')
 )
 
 # side_expand.write('---')
@@ -612,7 +630,7 @@ chart_1a = (
     .mark_line(opacity=0.9)
     .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
             y=alt.Y("GWP:Q",
-                    title=None,
+                    title='annual emissions (Mt CO2-e per year)',
                     # stack=None
                     ),
             color=alt.Color(dis_aggregation,
@@ -669,8 +687,10 @@ elif not grouped_data_GWP.empty:  # for elegent error handling
     value = grouped_data_GWP.sum(axis=1).values[0]
 else:  # also for elegent error handling
     value = 0
+value = adjusted_scientific_notation(value * 1.e6, True)
 c1a.metric(f'cumulative emissions between {date_range[0]}-{date_range[1]} (GWP100)',
-        f'{value:.2E}')
+           # f'{value:.2E} Mt CO2-e',)
+           f'{value}t CO\u2082-e')
 
 
 # CREATE WARMING PLOT
@@ -702,7 +722,7 @@ chart_1b = (
     .mark_line(opacity=0.9)
     .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
             y=alt.Y("warming:Q",
-                    title=None,
+                    title='global temperature change (°C)',
                     # stack=None
                     ),
             color=alt.Color(dis_aggregation,
@@ -730,7 +750,7 @@ chart_1b2 = (alt.Chart(bar_data[bar_data['year'] == date_range[1]], height=50)
                                 stack='normalize',
                                 axis=alt.Axis(
                                     domain=False, ticks=False, labels=False),
-                                title=f'warming distribution between {warming_start}-{date_range[1]}'),
+                                title=f'temperature change distribution between {warming_start}-{date_range[1]}'),
                         color=alt.Color(dis_aggregation,
                         scale=alt.Scale(domain=c_domain, range=c_range),
                         legend=None),
@@ -747,7 +767,7 @@ bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
 chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
     x=alt.X('warming:Q', stack='normalize',
             axis=alt.Axis(domain=False, ticks=False, labels=False),
-            title=f'warming distribution between {earliest_year}-{date_range[1]}'),
+            title=f'temperature change distribution between {earliest_year}-{date_range[1]}'),
     color=alt.Color(dis_aggregation,
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
@@ -775,8 +795,10 @@ elif not grouped_data.empty:  # for elegent error handling
     value = grouped_data[str(date_range[1])].values[0]
 else:  # also for elegent error handling
     value = 0
-c1b.metric(f'net warming between {warming_start}-{date_range[1]} (°C)',
-        f'{value:.2E}',)
+value = adjusted_scientific_notation(value, True)
+c1b.metric(f'net warming between {warming_start}-{date_range[1]}',
+        # f'{value:.2E}°C',
+        f'{value} °C')
 
 # ####
 # Make Sankey Diagram
