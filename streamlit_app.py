@@ -564,8 +564,12 @@ grouped_data_GWP = prepare_data(df_GWP,
                                 include_sum)
 
 # Transform from wide data to long data (altair likes long data)
-alt_data = grouped_data_GWP.T.reset_index().melt(id_vars=["index"])
-alt_data = alt_data.rename(columns={"index": "year", 'value': 'GWP'})
+alt_data = (grouped_data_GWP.T
+                            .reset_index()
+                            .melt(id_vars=["index"])
+                            .rename(columns={"index": "year", 'value': 'GWP'})
+)
+
 
 # Create colour mapping that accounts for a black 'SUM' line if multiple
 # lines are present
@@ -579,6 +583,8 @@ c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
 warming_start = date_range[0] if offset else 1850
 
+
+
 chart_1a = (
     alt.Chart(alt_data)
     .mark_line(opacity=0.9)
@@ -591,14 +597,36 @@ chart_1a = (
                             scale=alt.Scale(domain=c_domain, range=c_range)),
             tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
             )
-    #    .properties(height=500)
-    .configure_legend(orient='top-left')
-    .configure_axis(grid=False)
-    .configure_view(strokeOpacity=0.0)
 )
+
+bar_data = alt_data[alt_data[dis_aggregation] != 'SUM'].astype(dtype={'year':'int32'})
+chart_1a2 = alt.Chart(bar_data).mark_bar(opacity=0.9).encode(
+    color=dis_aggregation + ':N',
+    x=alt.X('sum(GWP):Q', stack="normalize",
+            axis=alt.Axis(domain=False, ticks=False, labels=False),
+            title=f'emissions distribution between {date_range[0]}-{date_range[1]}'),
+    tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q']
+
+)
+last_decade = bar_data.loc[(date_range[1] - bar_data['year'] < 10)]
+earliest_year = last_decade['year'].min()
+chart_1a3 = alt.Chart(last_decade).mark_bar(opacity=0.9).encode(
+    color=dis_aggregation + ':N',
+    x=alt.X('sum(GWP):Q', stack="normalize",
+            axis=alt.Axis(domain=False, ticks=False, labels=False),
+            title=f'emissions distribution between {earliest_year}-{date_range[1]}'),
+    tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q']
+)
+
+
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
 c1a.subheader('emissions using GWP_100')
-c1a.altair_chart(chart_1a, use_container_width=True)
+chart = (alt.vconcat(chart_1a, chart_1a2, chart_1a3)
+            .configure_legend(orient='top-left')
+            .configure_axis(grid=False)
+            .configure_view(strokeOpacity=0.0))
+c1a.altair_chart(chart, use_container_width=True)
+
 
 if 'SUM' in grouped_data_GWP.index:
     value = grouped_data_GWP.loc['SUM'].sum()
@@ -616,8 +644,11 @@ grouped_data = prepare_data(df_T, scenarios, countries, categories, entities,
                             dis_aggregation, date_range, offset, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
-alt_data = grouped_data.T.reset_index().melt(id_vars=["index"])
-alt_data = alt_data.rename(columns={"index": "year", 'value': 'warming'})
+alt_data = (grouped_data.T
+                        .reset_index()
+                        .melt(id_vars=["index"])
+                        .rename(columns={"index": "year", 'value': 'warming'})
+)
 
 # Create colour mapping that accounts for a black 'SUM' line if multiple
 # lines are present
@@ -643,13 +674,50 @@ chart_1b = (
                             scale=alt.Scale(domain=c_domain, range=c_range)),
             tooltip=[(dis_aggregation + ':N'), 'warming:Q']
             )
-    #    .properties(height=500)
-    .configure_legend(orient='top-left')
-    .configure_axis(grid=False)
-    .configure_view(strokeOpacity=0.0)
 )
+
+bar_data = (alt_data[alt_data[dis_aggregation] != 'SUM']
+            .astype(dtype={'year':'int32'}))
+A = (bar_data.loc[(bar_data['year'] == date_range[1]),
+                           [dis_aggregation, 'warming']]
+             .set_index(dis_aggregation).to_dict('index'))
+B = (bar_data.loc[(bar_data['year'] == date_range[0]),
+                           [dis_aggregation, 'warming']]
+             .set_index(dis_aggregation).to_dict('index'))
+bar_keys = [[key, A[key]['warming'] - B[key]['warming']] for key in A]
+bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
+chart_1b2 = alt.Chart(bar_data[bar_data['year'] == date_range[1]]).mark_bar(opacity=0.9).encode(
+    color=dis_aggregation + ':N',
+    x=alt.X('warming:Q', stack='normalize',
+            axis=alt.Axis(domain=False, ticks=False, labels=False),
+            title=f'warming distribution between {warming_start}-{date_range[1]}'),
+    tooltip=[(dis_aggregation + ':N'), 'warming:Q']
+
+)
+
+C = (bar_data.loc[(bar_data['year'] == earliest_year),
+                           [dis_aggregation, 'warming']]
+             .set_index(dis_aggregation).to_dict('index'))
+bar_keys = [[key, A[key]['warming'] - C[key]['warming']] for key in A]
+bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
+
+chart_1b3 = alt.Chart(bar_keys).mark_bar(opacity=0.9).encode(
+    color=dis_aggregation + ':N',
+    x=alt.X('warming:Q', stack='normalize',
+            axis=alt.Axis(domain=False, ticks=False, labels=False),
+            title=f'warming distribution between {earliest_year}-{date_range[1]}'),
+    tooltip=[(dis_aggregation + ':N'), 'warming:Q']
+)
+
+
+
 c1b.subheader(f'warming relative to {warming_start} (K)')
-c1b.altair_chart(chart_1b, use_container_width=True)
+# c1b.altair_chart(chart_1b, use_container_width=True)
+chart = (alt.vconcat(chart_1b, chart_1b2, chart_1b3)
+            .configure_legend(orient='top-left')
+            .configure_axis(grid=False)
+            .configure_view(strokeOpacity=0.0))
+c1b.altair_chart(chart, use_container_width=True)
 
 if 'SUM' in grouped_data.index:
     value = grouped_data.loc['SUM', str(date_range[1])]
