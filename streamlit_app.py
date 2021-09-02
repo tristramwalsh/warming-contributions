@@ -35,6 +35,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+st.markdown("<style>.element-container{opacity:1 !important}</style>", unsafe_allow_html=True)
+
 
 st.markdown(
     """
