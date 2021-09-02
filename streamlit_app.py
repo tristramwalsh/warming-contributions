@@ -35,6 +35,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Disable opacity fading every time a widget is changed.
+#https://discuss.streamlit.io/t/disable-reloading-of-image-every-time-a-widget-is-updated/1612/4
 st.markdown("<style>.element-container{opacity:1 !important}</style>", unsafe_allow_html=True)
 
 
@@ -485,7 +487,7 @@ scenarios = side_expand.selectbox(
 future_toggle = side_expand.checkbox('Explore Future Projections?', value=False)
 if future_toggle:
     future_non_co2_rate = side_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
-    future_co2_zero_year = side_expand.slider('Year of achieving net zero CO2 ewomissions', 2025, 2100, 2050)
+    future_co2_zero_year = side_expand.slider('Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
 else:
     future_non_co2_rate = None
     future_co2_zero_year = None
