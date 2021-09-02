@@ -647,7 +647,7 @@ chart_1a2 = (alt.Chart(bar_data, height=50).mark_bar(opacity=0.9).encode(
                     legend=None),    x=alt.X('sum(GWP):Q', stack="normalize",
                                              axis=alt.Axis(
                                                  domain=False, ticks=False, labels=False),
-                                             title=f'cumulative emissions distribution between {date_range[0]}-{date_range[1]}'),
+                                             title=f'cumulative emissions breakdown between {date_range[0]}-{date_range[1]}'),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
 
@@ -661,7 +661,7 @@ chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
     x=alt.X('sum(GWP):Q', stack="normalize",
             axis=alt.Axis(
                 domain=False, ticks=False, labels=False),
-            title=f'cumulative emissions distribution between {earliest_year}-{date_range[1]}'),
+            title=f'cumulative emissions breakdown between {earliest_year}-{date_range[1]}'),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
 
@@ -750,7 +750,7 @@ chart_1b2 = (alt.Chart(bar_data[bar_data['year'] == date_range[1]], height=50)
                                 stack='normalize',
                                 axis=alt.Axis(
                                     domain=False, ticks=False, labels=False),
-                                title=f'temperature change distribution between {warming_start}-{date_range[1]}'),
+                                title=f'temperature change breakdown between {warming_start}-{date_range[1]}'),
                         color=alt.Color(dis_aggregation,
                         scale=alt.Scale(domain=c_domain, range=c_range),
                         legend=None),
@@ -767,7 +767,7 @@ bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
 chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
     x=alt.X('warming:Q', stack='normalize',
             axis=alt.Axis(domain=False, ticks=False, labels=False),
-            title=f'temperature change distribution between {earliest_year}-{date_range[1]}'),
+            title=f'temperature change breakdown between {earliest_year}-{date_range[1]}'),
     color=alt.Color(dis_aggregation,
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
