@@ -35,6 +35,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+
 st.markdown(
     """
     # Contributions to Global Warming
@@ -563,6 +564,15 @@ offset = c2.checkbox(
     f"Calculate warming relative to selected start year {date_range[0]}?",
     value=True)
 
+c2.caption("""
+The timeseries depict annual emissions and the global temperature change consequent of those emissions.
+
+The first horizontal bar shows contributions over the *entire selected* time period, presenting dominant contributions to *historical* temperature change.
+
+The second horizontal bar shows contributions over the *final decade* of the selected time period, presenting the dominant contributions to *recent or current* temperature change.
+
+Note, the size of a contribution's bar is proportional to absolute value; large warming and large cooling will therefore have similar sized bars.
+""")
 
 # CREATE EMISSIONS PLOT
 include_sum = True
@@ -615,7 +625,7 @@ chart_1a2 = (alt.Chart(bar_data, height=50).mark_bar(opacity=0.9).encode(
                     legend=None),    x=alt.X('sum(GWP):Q', stack="normalize",
                                              axis=alt.Axis(
                                                  domain=False, ticks=False, labels=False),
-                                             title=f'emissions distribution between {date_range[0]}-{date_range[1]}'),
+                                             title=f'cumulative emissions distribution between {date_range[0]}-{date_range[1]}'),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
 
@@ -629,7 +639,7 @@ chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
     x=alt.X('sum(GWP):Q', stack="normalize",
             axis=alt.Axis(
                 domain=False, ticks=False, labels=False),
-            title=f'emissions distribution between {earliest_year}-{date_range[1]}'),
+            title=f'cumulative emissions distribution between {earliest_year}-{date_range[1]}'),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
 
@@ -637,7 +647,7 @@ chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
 
 
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
-c1a.subheader('emissions using GWP_100')
+c1a.subheader('annual emissions using GWP_100')
 chart_1a = (chart_1a
             .configure_legend(orient='top-left')
             .configure_axis(grid=False)
@@ -655,7 +665,7 @@ elif not grouped_data_GWP.empty:  # for elegent error handling
     value = grouped_data_GWP.sum(axis=1).values[0]
 else:  # also for elegent error handling
     value = 0
-c1a.metric(f'sum of emissions between {date_range[0]}-{date_range[1]} (GWP100)',
+c1a.metric(f'cumulative emissions between {date_range[0]}-{date_range[1]} (GWP100)',
         f'{value:.2E}')
 
 
@@ -743,7 +753,7 @@ chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
 
 
 
-c1b.subheader(f'warming relative to {warming_start} (K)')
+c1b.subheader(f'warming relative to {warming_start} (°C)')
 chart_1b = (chart_1b
             .configure_legend(orient='top-left')
             .configure_axis(grid=False)
@@ -761,7 +771,7 @@ elif not grouped_data.empty:  # for elegent error handling
     value = grouped_data[str(date_range[1])].values[0]
 else:  # also for elegent error handling
     value = 0
-c1b.metric(f'sum of warming between {warming_start}-{date_range[1]} (K)',
+c1b.metric(f'net warming between {warming_start}-{date_range[1]} (°C)',
         f'{value:.2E}',)
 
 # ####
@@ -883,7 +893,7 @@ fig = go.Figure(data=[go.Sankey(
             align='left', showarrow=False, x=0.0, y=1.0)
     ]))
 
-sankey_title = f'warming between {date_range[0]} and {date_range[1]} (K)'
+sankey_title = f'warming between {date_range[0]} and {date_range[1]} (°C)'
 c3.subheader(sankey_title)
 fig.update_layout(
     # font=dict(size=10),
@@ -893,6 +903,11 @@ fig.update_layout(
 c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
 
+c4.caption("""
+The sankey diagram presents a multi-level breakdown of contributions to *global temperature change*. Selections in the left hand sidebar affect all plots on this page; data used in the sankey plot corresponds exactly to the data in the plots above.
+
+Warming contributions (flows) are red; cooling contributions (fows) are blue. As with the bars above, width of the flows is proportional to the absolute value of temperature change - a wide red bar is a large warming impact, and a wide blue bar is a large cooling impact. The "true" size of any given node is therefore the width of the red flows minus the width of the blue flows.
+""")
 
 # about_expander = st.expander('About')
 st.markdown(
