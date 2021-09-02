@@ -669,7 +669,7 @@ chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
 
 
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
-c1a.subheader('annual emissions using GWP_100')
+c1a.subheader('annual emissions (GWP100)')
 chart_1a = (chart_1a
             .configure_legend(orient='top-left')
             .configure_axis(grid=False)
