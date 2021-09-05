@@ -38,6 +38,17 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Hide hamburger menu and 'made with streamlit' footer
+# https://discuss.streamlit.io/t/remove-made-with-streamlit-from-bottom-of-app/1370/2
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True) 
+
+
 # Disable opacity fading every time a widget is changed.
 #https://discuss.streamlit.io/t/disable-reloading-of-image-every-time-a-widget-is-updated/1612/4
 st.markdown("<style>.element-container{opacity:1 !important}</style>", unsafe_allow_html=True)
