@@ -530,18 +530,17 @@ scenarios = side_expand.selectbox(
     index=list(set(df['scenario'])).index('Prioritise Country-Reported Data')
 )
 
-# side_expand.write('---')
 
-# future_expand = st.sidebar.expander('Future Emissions')
-future_toggle = side_expand.checkbox('Explore Future Projections?',
-                                     value=False)
+future_expand = st.sidebar.expander('Future Emissions')
+future_toggle = future_expand.checkbox('Explore Future Projections?',
+                                       value=False)
 if future_toggle:
-    future_co2_zero_year = side_expand.slider(
+    future_co2_zero_year = future_expand.slider(
         'Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
-    future_ch4_rate = side_expand.slider(
+    future_ch4_rate = future_expand.slider(
         'Annual change in CH4 emissions (%)', -10., 0., -2.2,
         step=0.1, format='%f') / 100
-    future_n2o_rate = side_expand.slider(
+    future_n2o_rate = future_expand.slider(
         'Annual change in N2O emissions (%)', -10., 0., -0.7,
         step=0.1, format='%f') / 100
 else:
