@@ -291,7 +291,8 @@ def load_data(file):
 
 @st.cache(show_spinner=False, suppress_st_warning=True)
 def calc(df, scenarios, countries, categories, entities,
-         future_toggle, future_non_co2_rate, future_co2_zero_year):
+         future_toggle, future_co2_zero_year,
+         future_ch4_rate, future_n2o_rate):
     """Calculate warming impact, and GWP emissions, for given selection."""
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
@@ -359,11 +360,16 @@ def calc(df, scenarios, countries, categories, entities,
                                 arr_timeseries,
                                 np.linspace(arr_timeseries[-1], 0, future_co2_zero_year-2018)
                                 )
-                            
-                        else:
+                                                    
+                        elif entity == 'CH4':
                             arr_timeseries = np.append(
                                 arr_timeseries,
-                                np.array([arr_timeseries[-1] * (1+future_non_co2_rate)**i for i in fut_yrs-2019])
+                                np.array([arr_timeseries[-1] * (1+future_ch4_rate)**i for i in fut_yrs-2019])
+                                )
+                        elif entity == 'N2O':
+                            arr_timeseries = np.append(
+                                arr_timeseries,
+                                np.array([arr_timeseries[-1] * (1+future_n2o_rate)**i for i in fut_yrs-2019])
                                 )
                     # Calculate the warming impact from the individual_series
                     
@@ -522,12 +528,13 @@ scenarios = side_expand.selectbox(
 # future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = side_expand.checkbox('Explore Future Projections?', value=False)
 if future_toggle:
-    future_non_co2_rate = side_expand.slider('Annual change in non-CO2 emissions (%)', -15, 0, -3) / 100
     future_co2_zero_year = side_expand.slider('Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
+    future_ch4_rate = side_expand.slider('Annual change in CH4 emissions (%)', -10., 0., -2.2, step=0.1, format='%f') / 100
+    future_n2o_rate = side_expand.slider('Annual change in N2O emissions (%)', -10., 0., -0.7, step=0.1, format='%f') / 100
 else:
-    future_non_co2_rate = None
     future_co2_zero_year = None
-
+    future_ch4_rate = None
+    future_n2o_rate = None
 
 
 # st.sidebar.write('---')
@@ -579,7 +586,8 @@ entities = sorted(st.sidebar.multiselect(
 ####
 if d_set == 'IPCC AR5 Linear Impulse Response Model':
     df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
-        future_toggle, future_non_co2_rate, future_co2_zero_year)
+                        future_toggle, future_co2_zero_year,
+                        future_ch4_rate, future_n2o_rate)
 
 # CHECK DATA AVAILABLE
 if prepare_data(df_GWP,scenarios, countries, categories, entities,
@@ -1046,7 +1054,7 @@ list2.markdown(
 # ### What emissions are not included in this app?
 # *A note on the non-inclusion of LULUCF:* land use, land use change, and forestry (LULUCF) emissions are not included due to issues with data consistency; for more on this, [see the note here](http://www.pik-potsdam.de/paris-reality-check/primap-hist/). As such, **warming calculated in this release of the app is due to all CO2, CH4, and N2O emissions excluding LULUCF.**
 
-# *A note on the non-inclusion of the F-gases (HFCs, CFCs, SF6):* the three forcing agents that dominate contributions to global warming are CO2, CH4, N20. The behaviours of these gases, in particular the length of time for which they reside in the atmosphere, is relativelt unambiguous. Emissions of the F-gases are included as aggreage emissions, which cannot be reduced to a single atmospheric lifetime; this introduces uncertainty in how to treat them. While an upcoming release of this app will provide full coverage of the F-gases, their inclusion is not expected to significantly change the warming contributions in the majority of cases.
+# *A note on the non-inclusion of the F-gases (HFCs, CFCs, SF6):* the three forcing agents that dominate contributions to global warming are CO2, CH4, N2O. The behaviours of these gases, in particular the length of time for which they reside in the atmosphere, is relativelt unambiguous. Emissions of the F-gases are included as aggreage emissions, which cannot be reduced to a single atmospheric lifetime; this introduces uncertainty in how to treat them. While an upcoming release of this app will provide full coverage of the F-gases, their inclusion is not expected to significantly change the warming contributions in the majority of cases.
 
 # *A note on the non-inclusion of natural forcing:*
 st.markdown(
