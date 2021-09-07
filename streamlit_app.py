@@ -581,6 +581,34 @@ categories = sorted(st.sidebar.multiselect(
 
 ))
 
+codes = [cat.split(':')[0] for cat in categories]
+double_counter = []
+if 'Total excluding LULUCF' in codes and len(codes) > 1:
+    double_counter.append('`Total excluding LULUCF` covers all (sub)categories')
+for code in codes:
+    if len(code) > 1:
+        if code[0] in codes:
+            double_counter.append(f'`{code}` is also counted in `{code[0]}`')
+    if len(code) == 3:
+        if code[:2] in codes:
+            double_counter.append(f'`{code}` is also counted in `{code[:2]}`')
+
+if len(double_counter) > 0:
+    double_count_expander = st.sidebar.expander('Double Counting Warning')
+    double_count_expander.write(
+        'This selection double counts the following (sub)categories;\
+         make sure this is what you intended:')
+    for double in double_counter:
+        double_count_expander.write(f'- {double}')
+
+entities = sorted(st.sidebar.multiselect(
+    "Choose entities (gases)",
+    # sorted(list(set(df['entity']))),
+    # sorted(list(set(df['entity']))),
+    ['CH4', 'CO2', 'N2O'] if d_set == 'IPCC AR5 Linear Impulse Response Model'\
+    else sorted(list(set(df['entity']))),
+    ['CH4', 'CO2', 'N2O']
+))
 
 
 ####
