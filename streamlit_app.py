@@ -260,34 +260,29 @@ def load_data(file):
     df['scenario'] = df['scenario'].replace(scenario_names)
 
     category_names = {
-        'IPCM0EL': 'IPCM0EL: National Total excluding LULUCF',
-        'IPC1': 'IPC1: Energy',
-        'IPC1A': 'IPC1A: Fuel Combustion Activities',
-        'IPC1B': 'IPC1B: Fugitive Emissions from Fuels',
-        'IPC1B1': 'IPC1B1: Solid Fuels',
-        'IPC1B2': 'IPC1B2: Oil and Natural Gas',
-        'IPC1B3': 'IPC1B3: Other Emissions from Energy Production',
-        'IPC1C': 'IPC1C: Carbon Dioxide Transport and Storage (currently no\
-                  data available)',
-        'IPC2': 'IPC2: Industrial Processes and Product Use (IPPU)',
-        'IPC2A': 'IPC2A: Mineral Industry',
-        'IPC2B': 'IPC2B: Chemical Industry',
-        'IPC2C': 'IPC2C: Metal Industry',
-        'IPC2D': 'IPC2D: Non-Energy Products from Fuels and Solvent Use',
-        'IPC2E': 'IPC2E: Electronics Industry (no data available as the\
-                  category is only used for fluorinated gases which are only\
-                  resolved at the level of category IPC2)',
-        'IPC2F': 'IPC2F: Product uses as Substitutes for Ozone Depleting\
-                  Substances (no data available as the category is only used\
-                  for fluorinated gases which are only resolved at the level\
-                  of category IPC2)',
-        'IPC2G': 'IPC2G: Other Product Manufacture and Use',
-        'IPC2H': 'IPC2H: Other',
-        'IPCMAG': 'IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV',
-        'IPC3A': 'IPC3A: Livestock',
-        'IPCMAGELV': 'IPCMAGELV: Agriculture excluding Livestock',
-        'IPC4': 'IPC4: Waste',
-        'IPC5': 'IPC5: Other'}
+        'IPCM0EL': 'M0EL: National Total excluding LULUCF',
+        'IPC1': '1: Energy',
+        'IPC1A': '1A: Fuel Combustion Activities',
+        'IPC1B': '1B: Fugitive Emissions from Fuels',
+        'IPC1B1': '1B1: Solid Fuels',
+        'IPC1B2': '1B2: Oil and Natural Gas',
+        'IPC1B3': '1B3: Other Emissions from Energy Production',
+        'IPC1C': '1C: Carbon Dioxide Transport and Storage',
+        'IPC2': '2: Industrial Processes and Product Use (IPPU)',
+        'IPC2A': '2A: Mineral Industry',
+        'IPC2B': '2B: Chemical Industry',
+        'IPC2C': '2C: Metal Industry',
+        'IPC2D': '2D: Non-Energy Products from Fuels and Solvent Use',
+        'IPC2E': '2E: Electronics Industry',
+        'IPC2F': '2F: Product uses as Substitutes for Ozone Depleting\
+                  Substances',
+        'IPC2G': '2G: Other Product Manufacture and Use',
+        'IPC2H': '2H: Other',
+        'IPCMAG': '3: Agriculture, sum of 3A and 3B',
+        'IPC3A': '3A: Livestock',
+        'IPCMAGELV': '3B: Agriculture excluding Livestock',
+        'IPC4': '4: Waste',
+        'IPC5': '5: Other'}
     df['category'] = df['category'].replace(category_names)
 
     loading_message.empty()
@@ -567,27 +562,21 @@ date_range = st.sidebar.slider(
 countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
-    # not_country
-    # ['United Kingdom', 'Italy', 'Germany']
-    ['Aggregated emissions for all countries']
-    # list(set(df['country']))
-    # ['United Kingdom']
-    # ['European Union',
-    #  'United States',
-    #  'Least Developed Countries',
-    #  'Alliance of Small Island States',
-    #  'BASIC countries (Brazil, South Africa, India, and China)']
-    # ['European Union']
+    ['Aggregated emissions for all countries'],
+    help='For a guide to available emissions regions,\
+          please scroll down for the main text.'
 ))
 categories = sorted(st.sidebar.multiselect(
     "Choose emissions categories",
     list(set(df['category'])),
     # ['IPCM0EL: National Total excluding LULUCF']
-    ['IPC1: Energy',
-     'IPC2: Industrial Processes and Product Use (IPPU)',
-     'IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV',
-     'IPC4: Waste',
-     'IPC5: Other']
+    ['1: Energy',
+     '2: Industrial Processes and Product Use (IPPU)',
+     '3: Agriculture, sum of 3A and 3B',
+     '4: Waste',
+     '5: Other'],
+    help='For a guide to available emissions categories/sectors,\
+          please scroll down for the main text.'
 
 ))
 entities = sorted(st.sidebar.multiselect(
@@ -1087,33 +1076,33 @@ list1.markdown("""
 (the main categories and subsector divisions from the IPCC 2006 Guidelines for
 national greenhouse gas inventories [^IPCC 2006])
 - IPCM0EL: National Total excluding LULUCF
-    - IPC1: Energy
-        - IPC1A: Fuel Combustion Activities
-        - IPC1B: Fugitive Emissions from Fuels
-            - IPC1B1: Solid Fuels
-            - IPC1B2: Oil and Natural Gas
-            - IPC1B3: Other Emissions from Energy Production
-        - IPC1C: Carbon Dioxide Transport and Storage (currently no\
+    - 1: Energy
+        - 1A: Fuel Combustion Activities
+        - 1B: Fugitive Emissions from Fuels
+            - 1B1: Solid Fuels
+            - 1B2: Oil and Natural Gas
+            - 1B3: Other Emissions from Energy Production
+        - 1C: Carbon Dioxide Transport and Storage (currently no\
             data available)
-    - IPC2: Industrial Processes and Product Use (IPPU)
-        - IPC2A: Mineral Industry
-        - IPC2B: Chemical Industry
-        - IPC2C: Metal Industry
-        - IPC2D: Non-Energy Products from Fuels and Solvent Use
-        - IPC2E: Electronics Industry (no data available as the\
+    - 2: Industrial Processes and Product Use (IPPU)
+        - 2A: Mineral Industry
+        - 2B: Chemical Industry
+        - 2C: Metal Industry
+        - 2D: Non-Energy Products from Fuels and Solvent Use
+        - 2E: Electronics Industry (no data available as the\
                 category is only used for fluorinated gases which are only\
-                resolved at the level of category IPC2)
-        - IPC2F: Product uses as Substitutes for Ozone Depleting\
+                resolved at the level of category 2)
+        - 2F: Product uses as Substitutes for Ozone Depleting\
                 Substances (no data available as the category is only used\
                 for fluorinated gases which are only resolved at the level\
-                of category IPC2)
-        - IPC2G: Other Product Manufacture and Use
-        - IPC2H: Other
-    - IPCMAG: Agriculture, sum of IPC3A and IPCMAGELV
-        - IPC3A: Livestock
-        - IPCMAGELV: Agriculture excluding Livestock
-    - IPC4: Waste
-    - IPC5: Other
+                of category 2)
+        - 2G: Other Product Manufacture and Use
+        - 2H: Other
+    - MAG: Agriculture, sum of 3A and 3B
+        - 3A: Livestock
+        - 3B: Agriculture excluding Livestock
+    - 4: Waste
+    - 5: Other
 
 """)
 list2.markdown(
@@ -1121,7 +1110,7 @@ list2.markdown(
 #### Regions
 - All UNFCCC member states, as well as most non-UNFCCC territories
 [^ISO 3166-1 alpha-3]
-- Custom regional groupings, including:
+- Additional groupings, including:
     - Aggregated emissions for all countries
     - Annex I Parties to the Convention
     - Non-Annex I Parties to the Convention
