@@ -536,14 +536,15 @@ date_range = st.sidebar.slider(
     "Choose Date Range",
     min_value=1850,
     max_value=future_co2_zero_year if future_toggle else 2018,
-    value=[1850, future_co2_zero_year] if future_toggle else [1990, 2018]
+    value=[1850, future_co2_zero_year] if future_toggle else [1850, 2018]
     )
 
 countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
     list(set(df['country'])),
     # not_country
-    ['United Kingdom', 'Italy', 'Germany']
+    # ['United Kingdom', 'Italy', 'Germany']
+    ['Aggregated emissions for all countries']
     # list(set(df['country']))
     # ['United Kingdom']
     # ['European Union',
@@ -595,14 +596,14 @@ c2.subheader(' ')
 dis_aggregation = c2.selectbox(
     "Choose the breakdown to plot",
     ['country', 'category', 'entity'],
-    index=['country', 'category', 'entity'].index('entity')
+    index=['country', 'category', 'entity'].index('category')
 )
 # aggregated = sorted(list(set(['country', 'category', 'entity']) -
 #                         set([dis_aggregation])))
 
 offset = c2.checkbox(
     f"Calculate warming relative to selected start year {date_range[0]}?",
-    value=True)
+    value=False)
 
 c2.caption("""
 The timeseries depict annual emissions and the global temperature change consequent of those emissions.
