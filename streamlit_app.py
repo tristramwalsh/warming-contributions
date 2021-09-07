@@ -30,6 +30,7 @@ st.set_page_config(
 st.markdown('<style>#vg-tooltip-element{z-index: 1000051}</style>',
             unsafe_allow_html=True)
 # This next piece prevents the altair three dot menu from appearing.
+# source: https://discuss.streamlit.io/t/does-altairs-set-embed-options-work-with-streamlit/1675
 st.markdown("""
     <style type='text/css'>
         details {
@@ -40,6 +41,7 @@ st.markdown("""
 
 # Hide hamburger menu and 'made with streamlit' footer
 # https://discuss.streamlit.io/t/remove-made-with-streamlit-from-bottom-of-app/1370/2
+# also this https://discuss.streamlit.io/t/how-do-i-hide-remove-the-menu-in-production/362/7
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
