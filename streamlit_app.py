@@ -325,7 +325,7 @@ def calc(df, scenarios, countries, categories, entities,
     # times_calc, times_csv = [], []
     i = 1
     number_of_series = len(countries) * len(categories) * len(entities)
-    calc_text = st.sidebar.text('calculating...')
+    calc_text.text('calculating...')
     for country in countries:
         for category in categories:
             for entity in entities:
@@ -593,14 +593,6 @@ for code in codes:
         if code[:2] in codes:
             double_counter.append(f'`{code}` is also counted in `{code[:2]}`')
 
-if len(double_counter) > 0:
-    double_count_expander = st.sidebar.expander('Double Counting Warning')
-    double_count_expander.write(
-        'This selection double counts the following (sub)categories;\
-         make sure this is what you intended:')
-    for double in double_counter:
-        double_count_expander.write(f'- {double}')
-
 entities = sorted(st.sidebar.multiselect(
     "Choose entities (gases)",
     # sorted(list(set(df['entity']))),
@@ -610,6 +602,19 @@ entities = sorted(st.sidebar.multiselect(
     ['CH4', 'CO2', 'N2O']
 ))
 
+calc_text = st.sidebar.empty()
+
+if len(double_counter) > 0:
+    st.sidebar.write('---')
+    st.sidebar.warning('Watch Out: Double Counting')
+    double_count_expander = st.sidebar.expander('View Double Counting Details')
+    double_count_expander.write(
+        'This selection double counts the following (sub)categories;\
+         make sure this is what you intended:')
+    for double in double_counter:
+        double_count_expander.write(f'- {double}')
+
+exceptions_slot = st.sidebar.empty()
 
 ####
 # IF 'IPCC AR5 Linear Impulse Response Model' DATA SELECTED,
@@ -900,7 +905,7 @@ for c in countries:
         try:
             values.append(sankey_cs.loc[(c, s), str(date_range[1])])
         except KeyError:
-            exceptions.append(f'(country): {c} & (category): {s}')
+            exceptions.append(f'(country): `{c}` & (category): `{s}`')
             values.append(0)
 
 for s in categories:
@@ -910,7 +915,7 @@ for s in categories:
         try:
             values.append(sankey_sg.loc[(s, g), str(date_range[1])])
         except KeyError:
-            exceptions.append(f'(category): {s} & (entity): {g}')
+            exceptions.append(f'(category): `{s}` & (entity): `{g}`')
             values.append(0)
 
 for g in entities:
@@ -920,14 +925,16 @@ for g in entities:
         try:
             values.append(sankey_gc.loc[(g, c), str(date_range[1])])
         except KeyError:
-            exceptions.append(f'(entity): {g} & (country): {c}')
+            exceptions.append(f'(entity): `{g}` & (country): `{c}`')
             values.append(0)
-
+if len(exceptions) > 1 and len(double_counter) == 0:
+    st.sidebar.write('---')
 if len(exceptions) > 1:
+    # st.sidebar.warning('Watch Out: Some Emissions Missing')
     exceptions_expander = st.sidebar.expander('View Exceptions')
     exceptions_expander.write(
-        'This particular selected subset of the dataset contains ' +
-        'no data for the following combinations:')
+        'This particular selected subset of the dataset contains\
+         no emissions data for the following combinations:')
     for exception in exceptions:
         exceptions_expander.write(f'- {exception}')
 
