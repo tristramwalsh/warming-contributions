@@ -30,7 +30,8 @@ st.set_page_config(
 st.markdown('<style>#vg-tooltip-element{z-index: 1000051}</style>',
             unsafe_allow_html=True)
 # This next piece prevents the altair three dot menu from appearing.
-# source: https://discuss.streamlit.io/t/does-altairs-set-embed-options-work-with-streamlit/1675
+# source:
+# https://discuss.streamlit.io/t/does-altairs-set-embed-options-work-with-streamlit/1675
 st.markdown("""
     <style type='text/css'>
         details {
@@ -41,19 +42,21 @@ st.markdown("""
 
 # Hide hamburger menu and 'made with streamlit' footer
 # https://discuss.streamlit.io/t/remove-made-with-streamlit-from-bottom-of-app/1370/2
-# also this https://discuss.streamlit.io/t/how-do-i-hide-remove-the-menu-in-production/362/7
+# also this:
+# https://discuss.streamlit.io/t/how-do-i-hide-remove-the-menu-in-production/362/7
 hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
             </style>
             """
-st.markdown(hide_streamlit_style, unsafe_allow_html=True) 
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
 # Disable opacity fading every time a widget is changed.
-#https://discuss.streamlit.io/t/disable-reloading-of-image-every-time-a-widget-is-updated/1612/4
-st.markdown("<style>.element-container{opacity:1 !important}</style>", unsafe_allow_html=True)
+# https://discuss.streamlit.io/t/disable-reloading-of-image-every-time-a-widget-is-updated/1612/4
+st.markdown("<style>.element-container{opacity:1 !important}</style>",
+            unsafe_allow_html=True)
 
 
 st.markdown(
@@ -62,7 +65,6 @@ st.markdown(
     *across scenarios, countries, sectors, and the main gases*
     """
 )
-
 
 
 def EFmod(nyr, a):
@@ -119,20 +121,20 @@ def ETmod(nyr, a):
     time = np.arange(nyr) + 1
 
     # loop over thermal response times using AR5 formula for AGTP
-    for j in [0, 1]:
     # for j in numba.prange(2):
+    for j in [0, 1]:
         Tcal[:, 0] = Tcal[:, 0] + a[4] * a[13] * \
             a[0] * a[j+10] * (1 - np.exp(-time / a[j+15]))
 
         # loop over gas decay terms using AR5 formula for AGTP
-        for i in [1, 2, 3]:
         # for i in numba.prange(1, 4, 1):
+        for i in [1, 2, 3]:
             Tcal[:, 0] = Tcal[:, 0]+a[4]*a[13]*a[i]*a[i+5]*a[j+10] * \
                 (np.exp(-time/a[i+5])-np.exp(-time/a[j+15]))/(a[i+5]-a[j+15])
 
     # build up the rest of the Toeplitz matrix
-    for j in range(1, nyr):
     # for j in numba.prange(1, nyr):
+    for j in range(1, nyr):
         Tcal[j:nyr, j] = Tcal[0:nyr-j, 0]
 
     return Tcal
@@ -204,18 +206,22 @@ def PR_emissions_units(df):
 
 
 def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
+    """Return number in scientific form."""
     exponent_template = "{:0>%d}" % exponent_pad
     mantissa_template = "{:.%df}" % num_decimals
-    
+
     order_of_magnitude = np.floor(np.log10(abs(val)))
     nearest_lower_third = 3*(order_of_magnitude//3)
     adjusted_mantissa = val*10**(-nearest_lower_third)
     adjusted_mantissa_string = mantissa_template.format(adjusted_mantissa)
-    adjusted_exponent_string = "+-"[nearest_lower_third<0] + exponent_template.format(abs(nearest_lower_third))
+    adjusted_exponent_string = ("+-"[nearest_lower_third < 0] +
+                                exponent_template.format(
+                                    abs(nearest_lower_third))
+                                )
 
     if letter:
-        names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m', '+0.0': ' ',
-             '+3.0': ' k', '+6.0': ' M', '+9.0': ' G'}
+        names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m',
+                 '+0.0': ' ', '+3.0': ' k', '+6.0': ' M', '+9.0': ' G'}
         return adjusted_mantissa_string + names[adjusted_exponent_string]
     else:
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
@@ -332,7 +338,7 @@ def calc(df, scenarios, countries, categories, entities,
                 #  Visually show how far through the calculation we are
                 # name = f'{scenarios}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
-                loading_bar = percentage // 5 * '.' + (20 - percentage // 5) * ' '
+                loading_bar = percentage // 5*'.' + (20 - percentage // 5)*' '
                 # print(f'\r{percentage}% {loading_bar} {name}', end='')
                 calc_text.text(f'calculating {loading_bar} {percentage}% ')
                 i += 1
@@ -354,25 +360,30 @@ def calc(df, scenarios, countries, categories, entities,
                     arr_timeseries = df_timeseries.values.squeeze() / 1.e6
 
                     if future_toggle:
-                        fut_yrs = np.arange(future_co2_zero_year - 2019 + 1) + 2019
+                        fut_yrs = np.arange(2019, future_co2_zero_year + 1)
                         if entity == 'CO2':
                             arr_timeseries = np.append(
                                 arr_timeseries,
-                                np.linspace(arr_timeseries[-1], 0, future_co2_zero_year-2018)
+                                np.linspace(arr_timeseries[-1], 0,
+                                            future_co2_zero_year-2018)
                                 )
-                                                    
+
                         elif entity == 'CH4':
                             arr_timeseries = np.append(
                                 arr_timeseries,
-                                np.array([arr_timeseries[-1] * (1+future_ch4_rate)**i for i in fut_yrs-2019])
+                                np.array([arr_timeseries[-1] *
+                                          (1 + future_ch4_rate)**i
+                                          for i in fut_yrs-2019])
                                 )
                         elif entity == 'N2O':
                             arr_timeseries = np.append(
                                 arr_timeseries,
-                                np.array([arr_timeseries[-1] * (1+future_n2o_rate)**i for i in fut_yrs-2019])
+                                np.array([arr_timeseries[-1] *
+                                         (1 + future_n2o_rate)**i
+                                         for i in fut_yrs-2019])
                                 )
                     # Calculate the warming impact from the individual_series
-                    
+
                     # ti = dt.datetime.now()
                     temp = ETmod(ny, a_params(entity)) @ arr_timeseries
                     # tj = dt.datetime.now()
@@ -412,13 +423,14 @@ def calc(df, scenarios, countries, categories, entities,
     output_GWP.seek(0)  # we need to get back to the start of the StringIO
     df_GWP = pd.read_csv(output_GWP)
 
-    # Just being paranoid about data leaking between user interactsions (ie 
+    # Just being paranoid about data leaking between user interactsions (ie
     # ending up with data duplications, if each subsequent data selection adds
     # on top of the existing StringIO in memory virtual csv)
     output_T = io.StringIO()
     output_GWP = io.StringIO()
 
     return df_T, df_GWP
+
 
 @st.cache(show_spinner=False)
 def prepare_data(df, scenarios, countries, categories, entities,
@@ -495,7 +507,6 @@ st.sidebar.markdown('# Select Data to Explore')
 
 side_expand = st.sidebar.expander('Customise Calculation')
 d_set = side_expand.selectbox('Choose warming model',
-                            #   ['Emissions', 'Warming Impact', 'IPCC AR5 Linear Impulse Response Model'], 2)
                               ['IPCC AR5 Linear Impulse Response Model'], 0)
 
 # if d_set == 'Emissions':
@@ -510,8 +521,9 @@ d_set = side_expand.selectbox('Choose warming model',
 #     # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
 #     df = load_data(
 #         'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
-df = load_data(
-        'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
+PR_url = ('https://zenodo.org/record/4479172/files/' +
+          'PRIMAP-hist_v2.2_19-Jan-2021.csv')
+df = load_data(PR_url)
 
 ####
 # WIDGETS FOR USERS TO SELECT DATA
@@ -526,11 +538,17 @@ scenarios = side_expand.selectbox(
 # side_expand.write('---')
 
 # future_expand = st.sidebar.expander('Future Emissions')
-future_toggle = side_expand.checkbox('Explore Future Projections?', value=False)
+future_toggle = side_expand.checkbox('Explore Future Projections?',
+                                     value=False)
 if future_toggle:
-    future_co2_zero_year = side_expand.slider('Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
-    future_ch4_rate = side_expand.slider('Annual change in CH4 emissions (%)', -10., 0., -2.2, step=0.1, format='%f') / 100
-    future_n2o_rate = side_expand.slider('Annual change in N2O emissions (%)', -10., 0., -0.7, step=0.1, format='%f') / 100
+    future_co2_zero_year = side_expand.slider(
+        'Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
+    future_ch4_rate = side_expand.slider(
+        'Annual change in CH4 emissions (%)', -10., 0., -2.2,
+        step=0.1, format='%f') / 100
+    future_n2o_rate = side_expand.slider(
+        'Annual change in N2O emissions (%)', -10., 0., -0.7,
+        step=0.1, format='%f') / 100
 else:
     future_co2_zero_year = None
     future_ch4_rate = None
@@ -576,13 +594,15 @@ entities = sorted(st.sidebar.multiselect(
     "Choose entities (gases)",
     # sorted(list(set(df['entity']))),
     # sorted(list(set(df['entity']))),
-    ['CH4', 'CO2', 'N2O'] if d_set == 'IPCC AR5 Linear Impulse Response Model' else sorted(list(set(df['entity']))),
+    ['CH4', 'CO2', 'N2O'] if d_set == 'IPCC AR5 Linear Impulse Response Model'\
+    else sorted(list(set(df['entity']))),
     ['CH4', 'CO2', 'N2O']
 ))
 
 
 ####
-# IF 'IPCC AR5 Linear Impulse Response Model' DATA SELECTED, CALCULATE TEMPERATURES
+# IF 'IPCC AR5 Linear Impulse Response Model' DATA SELECTED,
+# CALCULATE TEMPERATURES
 ####
 if d_set == 'IPCC AR5 Linear Impulse Response Model':
     df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
@@ -590,7 +610,7 @@ if d_set == 'IPCC AR5 Linear Impulse Response Model':
                         future_ch4_rate, future_n2o_rate)
 
 # CHECK DATA AVAILABLE
-if prepare_data(df_GWP,scenarios, countries, categories, entities,
+if prepare_data(df_GWP, scenarios, countries, categories, entities,
                 'country', date_range, False, False).empty:
     st.warning('No emissions data available for this selection')
 
@@ -614,13 +634,18 @@ offset = c2.checkbox(
     value=False)
 
 c2.caption("""
-The timeseries depict annual emissions and the global temperature change consequent of those emissions.
+The timeseries depict annual emissions and the global temperature change
+consequent of those emissions.
 
-The first horizontal bar shows contributions over the *entire selected* time period, presenting dominant contributions to *historical* temperature change.
+The first horizontal bar shows contributions over the *entire selected* time
+period, presenting dominant contributions to *historical* temperature change.
 
-The second horizontal bar shows contributions over the *final decade* of the selected time period, presenting the dominant contributions to *recent or current* temperature change.
+The second horizontal bar shows contributions over the *final decade* of the
+selected time period, presenting the dominant contributions to *recent or
+current* temperature change.
 
-Note, the size of a contribution's bar is proportional to absolute value; large warming and large cooling will therefore have similar sized bars.
+Note, the size of a contribution's bar is proportional to absolute value;
+large warming and large cooling will therefore have similar sized bars.
 """)
 
 # CREATE EMISSIONS PLOT
@@ -635,7 +660,7 @@ alt_data = (grouped_data_GWP.T
                             .reset_index()
                             .melt(id_vars=["index"])
                             .rename(columns={"index": "year", 'value': 'GWP'})
-)
+            )
 
 
 # Create colour mapping that accounts for a black 'SUM' line if multiple
@@ -651,47 +676,48 @@ c_range = colour_range(c_domain, include_sum, dis_aggregation)
 warming_start = date_range[0] if offset else 1850
 
 
-
 chart_1a = (
     alt.Chart(alt_data)
-    .mark_line(opacity=0.9)
-    .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
-            y=alt.Y("GWP:Q",
-                    title='annual emissions (Mt CO2-e per year)',
-                    # stack=None
-                    ),
-            color=alt.Color(dis_aggregation,
-                            scale=alt.Scale(domain=c_domain, range=c_range)),
-            tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
-            )
+       .mark_line(opacity=0.9)
+       .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
+               y=alt.Y("GWP:Q",
+                       title='annual emissions (Mt CO2-e per year)',
+                       # stack=None
+                       ),
+               color=alt.Color(dis_aggregation,
+                               scale=alt.Scale(domain=c_domain,
+                                               range=c_range)),
+               tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
+               )
 )
 
 bar_data = alt_data[alt_data[dis_aggregation]
                     != 'SUM'].astype(dtype={'year': 'int32'})
+
 chart_1a2 = (alt.Chart(bar_data, height=50).mark_bar(opacity=0.9).encode(
     color=alt.Color(dis_aggregation,
                     scale=alt.Scale(domain=c_domain, range=c_range),
-                    legend=None),    x=alt.X('sum(GWP):Q', stack="normalize",
-                                             axis=alt.Axis(
-                                                 domain=False, ticks=False, labels=False),
-                                             title=f'cumulative emissions breakdown between {date_range[0]}-{date_range[1]}'),
+                    legend=None),
+    x=alt.X('sum(GWP):Q', stack="normalize", axis=alt.Axis(
+        domain=False, ticks=False, labels=False),
+            title=('cumulative emissions breakdown between' +
+                   f'{date_range[0]}-{date_range[1]}')),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
-
 )
+
 last_decade = bar_data.loc[(date_range[1] - bar_data['year'] < 10)]
 earliest_year = last_decade['year'].min()
 chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
     color=alt.Color(dis_aggregation,
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
-    x=alt.X('sum(GWP):Q', stack="normalize",
-            axis=alt.Axis(
+    x=alt.X('sum(GWP):Q', stack="normalize", axis=alt.Axis(
                 domain=False, ticks=False, labels=False),
-            title=f'cumulative emissions breakdown between {earliest_year}-{date_range[1]}'),
+            title=('cumulative emissions breakdown between' +
+                   f'{earliest_year}-{date_range[1]}')),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
-
 )
 
 
@@ -715,7 +741,8 @@ elif not grouped_data_GWP.empty:  # for elegent error handling
 else:  # also for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value * 1.e6, True)
-c1a.metric(f'cumulative emissions between {date_range[0]}-{date_range[1]} (GWP100)',
+c1a.metric(('cumulative emissions between' +
+           f'{date_range[0]}-{date_range[1]} (GWP100)'),
            # f'{value:.2E} Mt CO2-e',)
            f'{value}t CO\u2082-e')
 
@@ -730,7 +757,7 @@ alt_data = (grouped_data.T
                         .reset_index()
                         .melt(id_vars=["index"])
                         .rename(columns={"index": "year", 'value': 'warming'})
-)
+            )
 
 # Create colour mapping that accounts for a black 'SUM' line if multiple
 # lines are present
@@ -761,7 +788,7 @@ chart_1b = (
 
 
 bar_data = (alt_data[alt_data[dis_aggregation] != 'SUM']
-            .astype(dtype={'year':'int32'}))
+            .astype(dtype={'year': 'int32'}))
 A = (bar_data.loc[(bar_data['year'] == date_range[1]),
                   [dis_aggregation, 'warming']]
              .set_index(dis_aggregation).to_dict('index'))
@@ -777,16 +804,17 @@ chart_1b2 = (alt.Chart(bar_data[bar_data['year'] == date_range[1]], height=50)
                                 stack='normalize',
                                 axis=alt.Axis(
                                     domain=False, ticks=False, labels=False),
-                                title=f'temperature change breakdown between {warming_start}-{date_range[1]}'),
+                                title=('temperature change breakdown between' +
+                                       f'{warming_start}-{date_range[1]}')),
                         color=alt.Color(dis_aggregation,
                         scale=alt.Scale(domain=c_domain, range=c_range),
                         legend=None),
                         tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
-                 .configure_axis(grid=False)
+                .configure_axis(grid=False)
              )
 
 C = (bar_data.loc[(bar_data['year'] == earliest_year),
-                           [dis_aggregation, 'warming']]
+                  [dis_aggregation, 'warming']]
              .set_index(dis_aggregation).to_dict('index'))
 bar_keys = [[key, A[key]['warming'] - C[key]['warming']] for key in A]
 bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
@@ -794,7 +822,8 @@ bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
 chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
     x=alt.X('warming:Q', stack='normalize',
             axis=alt.Axis(domain=False, ticks=False, labels=False),
-            title=f'temperature change breakdown between {earliest_year}-{date_range[1]}'),
+            title=('temperature change breakdown between' +
+                   f'{earliest_year}-{date_range[1]}')),
     color=alt.Color(dis_aggregation,
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
@@ -803,13 +832,12 @@ chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
 )
 
 
-
 c1b.subheader(f'warming relative to {warming_start} (°C)')
 chart_1b = (chart_1b
             .configure_legend(orient='top-left')
             .configure_axis(grid=False)
             .configure_view(strokeOpacity=0.0)
-             )
+            )
 
 c1b.altair_chart(chart_1b, use_container_width=True)
 c1b.altair_chart(chart_1b2, use_container_width=True)
@@ -824,8 +852,8 @@ else:  # also for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value, True)
 c1b.metric(f'net warming between {warming_start}-{date_range[1]}',
-        # f'{value:.2E}°C',
-        f'{value} °C')
+           # f'{value:.2E}°C',
+           f'{value} °C')
 
 # ####
 # Make Sankey Diagram
@@ -838,21 +866,21 @@ c4.subheader(' ')
 # seems like intuitive behaviour. Therefore, the offset only applies to the
 # line chart to change the relateive start date for that...
 sankey_cs = prepare_data(df_T, scenarios, countries, categories, entities,
-                        ['country', 'category'], date_range, True, False)
+                         ['country', 'category'], date_range, True, False)
 sankey_sg = prepare_data(df_T, scenarios, countries, categories, entities,
-                        ['category', 'entity'], date_range, True, False)
+                         ['category', 'entity'], date_range, True, False)
 sankey_gc = prepare_data(df_T, scenarios, countries, categories, entities,
-                        ['entity', 'country'], date_range, True, False)
+                         ['entity', 'country'], date_range, True, False)
 
 # snky_xpndr = st.expander('sankey data')
 # snky_xpndr.write(sankey_cs)
 # snky_xpndr.write(sankey_sg)
 middle = c4.selectbox('Choose the focused variable',
-                    ['country', 'category', 'entity'], 1)
+                      ['country', 'category', 'entity'], 1)
 labels = countries + categories + entities
 node_colors = (colour_range(countries, False, 'country') +
-            colour_range(categories, False, 'category') +
-            colour_range(entities, False, 'entity'))
+               colour_range(categories, False, 'category') +
+               colour_range(entities, False, 'entity'))
 sources, targets, values, exceptions = [], [], [], []
 for c in countries:
     for s in categories:
@@ -893,9 +921,9 @@ if len(exceptions) > 1:
         exceptions_expander.write(f'- {exception}')
 
 flow_colors = ['rgba(246, 51, 102, 0.3)' if t > 0
-            else 'rgba(58, 213, 203, 0.3)'
-            # else '#284960'
-            for t in values]
+               else 'rgba(58, 213, 203, 0.3)'
+               # else '#284960'
+               for t in values]
 values = [abs(t) for t in values]
 
 cs = len(countries) * len(categories)
@@ -957,9 +985,16 @@ c3.plotly_chart(fig, use_container_width=True,
                 config=dict({'displayModeBar': False}))
 
 c4.caption("""
-The sankey diagram presents a multi-level breakdown of contributions to *global temperature change*. Selections in the left hand sidebar affect all plots on this page; data used in the sankey plot corresponds exactly to the data in the plots above.
+The sankey diagram presents a multi-level breakdown of contributions to
+*global temperature change*. Selections in the left hand sidebar affect all
+plots on this page; data used in the sankey plot corresponds exactly to the
+data in the plots above.
 
-Warming contributions (flows) are red; cooling contributions (fows) are blue. As with the bars above, width of the flows is proportional to the absolute value of temperature change - a wide red bar is a large warming impact, and a wide blue bar is a large cooling impact. The "true" size of any given node is therefore the width of the red flows minus the width of the blue flows.
+Warming contributions (flows) are red; cooling contributions (fows) are blue.
+As with the bars above, width of the flows is proportional to the absolute
+value of temperature change - a wide red bar is a large warming impact, and a
+wide blue bar is a large cooling impact. The "true" size of any given node is
+therefore the width of the red flows minus the width of the blue flows.
 """)
 
 # about_expander = st.expander('About')
@@ -968,9 +1003,14 @@ st.markdown(
 ---
 
 ## Introduction
-This app provides a quantitative esimation of contributions to global temperature increase due to emissions from individual greenhouse gases, countries, and emission categories and subsectors.
+This app provides a quantitative esimation of contributions to global
+temperature increase due to emissions from individual greenhouse gases,
+countries, and emission categories and subsectors.
 
-Make a selection to explore within those groups using the left side bar. The default mode explores historical emissions and their contributions to global temperature change; you can also include and experiment with projections of future emissions.
+Make a selection to explore within those groups using the left side bar. The
+default mode explores historical emissions and their contributions to global
+temperature change; you can also include and experiment with projections of
+future emissions.
 
 
 """)
@@ -978,12 +1018,21 @@ Make a selection to explore within those groups using the left side bar. The def
 
 st.markdown("""
 ## Coverage of emissions and temperature impact
-Emissions of individual greenhouse gases are as reported in the PRIMAP database. [^Gütschow et al 2021]
+Emissions of individual greenhouse gases are as reported in the PRIMAP
+database. [^Gütschow et al 2021]
 
-Temperature change alculations are all based on the linear response model documented in the IPCC's 5th Assessment Report. [^IPCC AR5 WG1 (Myhre et al 2013)]
+Temperature change alculations are all based on the linear response model
+documented in the IPCC's 5th Assessment Report.
+[^IPCC AR5 WG1 (Myhre et al 2013)]
 
 
-*A note on double counting within selections:* in the 'region' and 'category' multi-selects in the side bar, subgroupings of emissions can be selected alongside their umbrella group; this allows for more granular exploration of the contributions to historical warming, however **double counting is possible if you select both a group and any of its subgroups:** for example, selecting 'IPC1' and 'IPC1A' will double count 'IPC1A' in the calculations; selecting 'European Union' and 'France' will double count 'France' in the calculations.
+*A note on double counting within selections:* in the 'region' and 'category'
+multi-selects in the side bar, subgroupings of emissions can be selected
+alongside their umbrella group; this allows for more granular exploration of
+the contributions to historical warming, however **double counting is possible
+if you select both a group and any of its subgroups:** for example, selecting
+'IPC1' and 'IPC1A' will double count 'IPC1A' in the calculations; selecting
+'European Union' and 'France' will double count 'France' in the calculations.
 
 ### Which contributors to temperature change are included
 
@@ -992,7 +1041,8 @@ Temperature change alculations are all based on the linear response model docume
 list1, list2 = st.columns(2)
 list1.markdown("""
 #### Categories
-(the main categories and subsector divisions from the IPCC 2006 Guidelines for national greenhouse gas inventories [^IPCC 2006])
+(the main categories and subsector divisions from the IPCC 2006 Guidelines for
+national greenhouse gas inventories [^IPCC 2006])
 - IPCM0EL: National Total excluding LULUCF
     - IPC1: Energy
         - IPC1A: Fuel Combustion Activities
@@ -1026,7 +1076,8 @@ list1.markdown("""
 list2.markdown(
     """
 #### Regions
-- All UNFCCC member states, as well as most non-UNFCCC territories [^ISO 3166-1 alpha-3]
+- All UNFCCC member states, as well as most non-UNFCCC territories
+[^ISO 3166-1 alpha-3]
 - Custom regional groupings, including:
     - Aggregated emissions for all countries
     - Annex I Parties to the Convention
@@ -1052,9 +1103,22 @@ list2.markdown(
 #     """
 
 # ### What emissions are not included in this app?
-# *A note on the non-inclusion of LULUCF:* land use, land use change, and forestry (LULUCF) emissions are not included due to issues with data consistency; for more on this, [see the note here](http://www.pik-potsdam.de/paris-reality-check/primap-hist/). As such, **warming calculated in this release of the app is due to all CO2, CH4, and N2O emissions excluding LULUCF.**
+# *A note on the non-inclusion of LULUCF:* land use, land use change, and
+# forestry (LULUCF) emissions are not included due to issues with data
+# consistency; for more on this,
+# [see note here](http://www.pik-potsdam.de/paris-reality-check/primap-hist/).
+# As such, **warming calculated in this release of the app is due to all CO2,
+# CH4, and N2O emissions excluding LULUCF.**
 
-# *A note on the non-inclusion of the F-gases (HFCs, CFCs, SF6):* the three forcing agents that dominate contributions to global warming are CO2, CH4, N2O. The behaviours of these gases, in particular the length of time for which they reside in the atmosphere, is relativelt unambiguous. Emissions of the F-gases are included as aggreage emissions, which cannot be reduced to a single atmospheric lifetime; this introduces uncertainty in how to treat them. While an upcoming release of this app will provide full coverage of the F-gases, their inclusion is not expected to significantly change the warming contributions in the majority of cases.
+# *A note on the non-inclusion of the F-gases (HFCs, CFCs, SF6):* the three
+# forcing agents that dominate contributions to global warming are CO2, CH4,
+# N2O. The behaviours of these gases, in particular the length of time for
+# which they reside in the atmosphere, is relativelt unambiguous. Emissions of
+# the F-gases are included as aggreage emissions, which cannot be reduced to a
+# single atmospheric lifetime; this introduces uncertainty in how to treat
+# them. While an upcoming release of this app will provide full coverage of the
+# F-gases, their inclusion is not expected to significantly change the warming
+# contributions in the majority of cases.
 
 # *A note on the non-inclusion of natural forcing:*
 st.markdown(
@@ -1074,21 +1138,43 @@ myles.allen@ouce.ox.ac.uk |
 Environmental Change Institute |
 University of Oxford
 
-With support from: **4C-europe** (Climate-Carbon Interactions in the Current Century
+With support from: **4C-europe** (Climate-Carbon Interactions in the Current
+Century)
 
-*Please get in touch with us if you notice issues, suggestions, or would like access to the warming data. Additionally, if you have found this app useful, we'd welcome hearing about where and how you you have used information and insights produced here.*
+*Please get in touch with us if you notice issues, suggestions, or would like
+access to the warming data. Additionally, if you have found this app useful,
+we'd welcome hearing about where and how you you have used information and
+insights produced here.*
 """)
 
 st.caption("""
 ---
 
-[^Gütschow et al 2021]: Gütschow, J.; Günther, A.; Jeffery, L.; Gieseke, R. (2021): The PRIMAP-hist national historical emissions time series (1850-2018). v2.2. zenodo. Available from https://doi.org/10.5281/zenodo.4479172
+[^Gütschow et al 2021]: Gütschow, J.; Günther, A.; Jeffery, L.; Gieseke, R.
+(2021): The PRIMAP-hist national historical emissions time series (1850-2018).
+v2.2. zenodo. Available from https://doi.org/10.5281/zenodo.4479172
 
-[^IPCC AR5 WG1 (Myhre et al 2013)]: Myhre, G., D. Shindell, F.-M. Bréon, W. Collins, J. Fuglestvedt, J. Huang, D. Koch, J.-F. Lamarque, D. Lee, B. Mendoza, T. Nakajima, A. Robock, G. Stephens, T. Takemura and H. Zhang, 2013: Anthropogenic and Natural Radiative Forcing Supplementary Material. In: Climate Change 2013: The Physical Science Basis. Contribution of Working Group I to the Fifth Assessment Report of the Intergovernmental Panel on Climate Change [Stocker, T.F., D. Qin, G.-K. Plattner, M. Tignor, S.K. Allen, J. Boschung, A. Nauels, Y. Xia, V. Bex and P.M. Midgley (eds.)]. Available from https://www.ipcc.ch/report/ar5/wg1/chapter-8sm-anthropogenic-and-natural-radiative-forcing-supplementary-material/
+[^IPCC AR5 WG1 (Myhre et al 2013)]: Myhre, G., D. Shindell, F.-M. Bréon,
+W. Collins, J. Fuglestvedt, J. Huang, D. Koch, J.-F. Lamarque, D. Lee,
+B. Mendoza, T. Nakajima, A. Robock, G. Stephens, T. Takemura and H. Zhang,
+2013: Anthropogenic and Natural Radiative Forcing Supplementary Material.
+In: Climate Change 2013: The Physical Science Basis.
+Contribution of Working Group I to the Fifth Assessment Report of the
+Intergovernmental Panel on Climate Change
+[Stocker, T.F., D. Qin, G.-K. Plattner, M. Tignor, S.K. Allen, J. Boschung,
+A. Nauels, Y. Xia, V. Bex and P.M. Midgley (eds.)].
+Available from
+https://www.ipcc.ch/report/ar5/wg1/chapter-8sm-anthropogenic-and-natural-radiative-forcing-supplementary-material/
 
-[^IPCC 2006]: Jim Penman (UK), Michael Gytarsky (Russia), Taka Hiraishi (Japan), William Irving (USA), and Thelma Krug (Brazil), (2006) Overview of the IPCC Guidelines for National Greenhouse Gas Inventories. Available from https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/0_Overview/V0_1_Overview.pdf
+[^IPCC 2006]: Jim Penman (UK), Michael Gytarsky (Russia),
+Taka Hiraishi (Japan), William Irving (USA), and Thelma Krug (Brazil),
+(2006) Overview of the IPCC Guidelines for National Greenhouse Gas Inventories.
+Available from
+https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/0_Overview/V0_1_Overview.pdf
 
-[^ISO 3166-1 alpha-3]: See https://unstats.un.org/unsd/tradekb/knowledgebase/country-code, and https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3 for more information.
+[^ISO 3166-1 alpha-3]: See
+https://unstats.un.org/unsd/tradekb/knowledgebase/country-code, and
+https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3 for more information.
 
 """
-)
+           )
