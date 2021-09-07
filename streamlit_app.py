@@ -1141,12 +1141,17 @@ list2.markdown(
 - Additional groupings, including:
     - Aggregated emissions for all countries
     - Annex I Parties to the Convention
+    ([list](https://unfccc.int/parties-observers))
     - Non-Annex I Parties to the Convention
+    ([list](https://unfccc.int/parties-observers))
     - Alliance fo Small Island States
+    ([list](https://www.aosis.org/about/member-states/))
     - BASIC countries (Brazil, South Africa, India, and China)
     - European Union
+    ([list](https://europa.eu/european-union/about-eu/countries_en))
     - Least Developed Countries
     - Umbrella Group
+    ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
 
 #### Entities
 (the gases that dominantly contribute to global warming)
