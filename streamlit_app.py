@@ -221,7 +221,8 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
 
     if letter:
         names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m',
-                 '+0.0': ' ', '+3.0': ' k', '+6.0': ' M', '+9.0': ' G'}
+                 '+0.0': ' ', '+3.0': ' k', '+6.0': ' M', '+9.0': ' G',
+                 '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
         return adjusted_mantissa_string + names[adjusted_exponent_string]
     else:
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
@@ -696,7 +697,7 @@ chart_1a = (
        .mark_line(opacity=0.9)
        .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
                y=alt.Y("GWP:Q",
-                       title='annual emissions (Mt CO2-e per year)',
+                       title='annual emissions (Gt CO2-e per year)',
                        # stack=None
                        ),
                color=alt.Color(dis_aggregation,
@@ -755,7 +756,7 @@ elif not grouped_data_GWP.empty:  # for elegent error handling
     value = grouped_data_GWP.sum(axis=1).values[0]
 else:  # also for elegent error handling
     value = 0
-value = adjusted_scientific_notation(value * 1.e6, True)
+value = adjusted_scientific_notation(value * 1.e9, True)
 c1a.metric(('cumulative emissions between' +
            f'{date_range[0]}-{date_range[1]} (GWP100)'),
            # f'{value:.2E} Mt CO2-e',)
