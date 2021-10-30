@@ -207,10 +207,14 @@ def PR_emissions_units(df):
 
 def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
     """Return number in scientific form."""
+  
     exponent_template = "{:0>%d}" % exponent_pad
     mantissa_template = "{:.%df}" % num_decimals
 
-    order_of_magnitude = np.floor(np.log10(abs(val)))
+    if val != 0:  # Catch issue handling 0 emissions.
+        order_of_magnitude = np.floor(np.log10(abs(val)))
+    else:
+        order_of_magnitude = 0
     nearest_lower_third = 3*(order_of_magnitude//3)
     adjusted_mantissa = val*10**(-nearest_lower_third)
     adjusted_mantissa_string = mantissa_template.format(adjusted_mantissa)
@@ -221,8 +225,8 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
 
     if letter:
         names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m',
-                 '+0.0': ' ', '+3.0': ' k', '+6.0': ' M', '+9.0': ' G',
-                 '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
+                '+00': ' ', '+3.0': ' k', '+6.0': ' M', '+9.0': ' G',
+                '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
         return adjusted_mantissa_string + names[adjusted_exponent_string]
     else:
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
@@ -783,6 +787,7 @@ elif not grouped_data_GWP.empty:  # for elegent error handling
     value = grouped_data_GWP.sum(axis=1).values[0]
 else:  # also for elegent error handling
     value = 0
+
 value = adjusted_scientific_notation(value * 1.e9, True)
 c1a.metric(('cumulative emissions between ' +
            f'{date_range[0]}-{date_range[1]} (GWP100)'),
