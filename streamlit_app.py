@@ -185,11 +185,11 @@ def a_params(gas):
     a_n2o[5:9] = [1, 121., 1, 1]                              # N2O lifetime
     a_n2o[13] = (1.-0.36 * 1.65 * 3.63e-4 / 3.0e-3) * 3.0e-3  # Adjusted radiative efficiency in W/m2/ppb
 
-    if gas == 'CO2':
+    if gas == 'Carbon Dioxide':
         return a_ar5
-    elif gas == 'CH4':
+    elif gas == 'Methane':
         return a_ch4
-    elif gas == 'N2O':
+    elif gas == 'Nitrous Oxide':
         return a_n2o
 
 
@@ -290,6 +290,11 @@ def load_data(file):
         'IPC5': '5: Other'}
     df['category'] = df['category'].replace(category_names)
 
+    gas_names = {
+        'CO2': 'Carbon Dioxide', 'CH4': 'Methane', 'N2O': 'Nitrous Oxide'
+    }
+    df['entity'] = df['entity'].replace(gas_names)
+
     loading_message.empty()
 
     return df
@@ -301,7 +306,7 @@ def calc(df, scenarios, countries, categories, entities,
          future_ch4_rate, future_n2o_rate):
     """Calculate warming impact, and GWP emissions, for given selection."""
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
-    gwp = {'CO2': 1., 'CH4': 28., 'N2O': 265.}
+    gwp = {'Carbon Dioxide': 1., 'Methane': 28., 'Nitrous Oxide': 265.}
 
     emis_to_calculate = df[
                     (df['scenario'] == scenarios) &
@@ -361,21 +366,21 @@ def calc(df, scenarios, countries, categories, entities,
 
                     if future_toggle:
                         fut_yrs = np.arange(2019, future_co2_zero_year + 1)
-                        if entity == 'CO2':
+                        if entity == 'Carbon Dioxide':
                             arr_timeseries = np.append(
                                 arr_timeseries,
                                 np.linspace(arr_timeseries[-1], 0,
                                             future_co2_zero_year-2018)
                                 )
 
-                        elif entity == 'CH4':
+                        elif entity == 'Methane':
                             arr_timeseries = np.append(
                                 arr_timeseries,
                                 np.array([arr_timeseries[-1] *
                                           (1 + future_ch4_rate)**i
                                           for i in fut_yrs-2019])
                                 )
-                        elif entity == 'N2O':
+                        elif entity == 'Nitrous Oxide':
                             arr_timeseries = np.append(
                                 arr_timeseries,
                                 np.array([arr_timeseries[-1] *
@@ -601,9 +606,10 @@ entities = sorted(st.sidebar.multiselect(
     "Choose entities (gases)",
     # sorted(list(set(df['entity']))),
     # sorted(list(set(df['entity']))),
-    ['CH4', 'CO2', 'N2O'] if d_set == 'IPCC AR5 Linear Impulse Response Model'\
-    else sorted(list(set(df['entity']))),
-    ['CH4', 'CO2', 'N2O']
+    ['Methane', 'Carbon Dioxide', 'Nitrous Oxide']\
+        if d_set == 'IPCC AR5 Linear Impulse Response Model'\
+        else sorted(list(set(df['entity']))),
+    ['Methane', 'Carbon Dioxide', 'Nitrous Oxide']
 ))
 
 calc_text = st.sidebar.empty()
@@ -1160,9 +1166,9 @@ list2.markdown(
 
 #### Entities
 (the gases that dominantly contribute to global warming)
-- CO2
-- CH4
-- N2O
+- (CO2) Carbon Dioxide
+- (CH4) Methane
+- (N2O) Nitrous Oxide
 
 #### Reporting Scenarios
 - HISTCR: Prioritise Country-Reported Data
