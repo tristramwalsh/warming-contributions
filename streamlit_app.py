@@ -16,6 +16,7 @@ import matplotlib
 import plotly.graph_objects as go
 import pycountry
 
+## TRIVIAL TEST CODE CHANGE
 
 st.set_page_config(
     page_title="Warming Contributions Explorer",
