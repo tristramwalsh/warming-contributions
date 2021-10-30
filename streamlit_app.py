@@ -242,7 +242,7 @@ def load_data(file):
 
     country_names = {x: pycountry.countries.get(alpha_3=x).name
                      for x in iso_country}
-    country_names['Netherlands Antilles'] = 'ANT'
+    country_names['ANT'] = 'Netherlands Antilles'
     
     # Note, the space at the beginning of the long names below is used so that
     # these group-style regions appear first in the multiselect box. It doesn't
