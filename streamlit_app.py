@@ -469,36 +469,53 @@ def prepare_data(df, scenarios, countries, categories, entities,
 
 def colour_range(domain, include_total, variable):
     """Create colormap with 'SUM' black."""
-    if variable == 'country':
-        cm = 'pastel'
-        # cm = 'bright'
-        # cm = 'winter'
-        # cm= 'rainbow'
-    elif variable == 'category':
-        cm = 'Set2'
-        # cm = 'autumn'
-        # cm = "pastel"
+    if variable != 'entity':
+        if variable == 'country':
+            cm = 'pastel'
+            # cm = 'bright'
+            # cm = 'winter'
+            # cm= 'rainbow'
+        elif variable == 'category':
+            cm = 'Set2'
+            # cm = 'autumn'
+            # cm = "pastel"
+        else:
+            print('PANIC')
+
+
+        if len(domain) > 1 and include_total is True:
+            # domain = list(grouped_data.index)
+            # colour_map = plt.get_cmap(cm)
+            # cols = np.array(list(iter(
+            #   colour_map(np.linspace(0, 1, len(domain)-1)))))
+            cols = np.array(sns.color_palette(cm, len(domain)-1))
+            cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
+                        for i in range(cols.shape[0])]
+            # Final item in index is 'SUM'; add 'black' to range for this
+            cols_hex.append('#000000')
+
+        else:
+            cols = np.array(sns.color_palette(cm, len(domain)))
+            cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
+                        for i in range(cols.shape[0])]
+
     elif variable == 'entity':
+        # Handle separately so that, unlike above flexible handling (for now),
+        # each gas has a signature colour that doesn't change depending on
+        # which gases are selected.
+
         # cm = 'flare'
         # cm = 'cool'
         cm = 'viridis'
         # cm = 'muted'
+        entity_cols = {
+            'Carbon Dioxide': '#3b528b',
+            'Methane': '#21918c',
+            'Nitrous Oxide': '#5ec962',
+            'SUM': '#000000'
+        }
+        cols_hex = [entity_cols[gas] for gas in domain]
 
-    if len(domain) > 1 and include_total is True:
-        # domain = list(grouped_data.index)
-        # colour_map = plt.get_cmap(cm)
-        # cols = np.array(list(iter(
-        #   colour_map(np.linspace(0, 1, len(domain)-1)))))
-        cols = np.array(sns.color_palette(cm, len(domain)-1))
-        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
-                    for i in range(cols.shape[0])]
-        # Final item in index is 'SUM'; add 'black' to range for this
-        cols_hex.append('#000000')
-
-    else:
-        cols = np.array(sns.color_palette(cm, len(domain)))
-        cols_hex = [matplotlib.colors.rgb2hex(cols[i, :])
-                    for i in range(cols.shape[0])]
     return cols_hex
 
 
