@@ -225,8 +225,8 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
 
     if letter:
         names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m',
-                '+00': ' ', '+3.0': ' k', '+6.0': ' M', '+9.0': ' G',
-                '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
+                '+00': ' ', '+0.0': ' ', '+3.0': ' k', '+6.0': ' M',
+                '+9.0': ' G', '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
         return adjusted_mantissa_string + names[adjusted_exponent_string]
     else:
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
