@@ -243,15 +243,19 @@ def load_data(file):
     country_names = {x: pycountry.countries.get(alpha_3=x).name
                      for x in iso_country}
     country_names['Netherlands Antilles'] = 'ANT'
+    
+    # Note, the space at the beginning of the long names below is used so that
+    # these group-style regions appear first in the multiselect box. It doesn't
+    # affect display in plots.
     country_names.update(
-        {'EARTH': 'Aggregated emissions for all countries',
-         'ANNEXI': 'Annex I Parties to the Convention',
-         'NONANNEXI': 'Non-Annex I Parties to the Convention',
-         'AOSIS': 'Alliance of Small Island States',
-         'BASIC': 'BASIC countries (Brazil, South Africa, India, and China)',
-         'EU28': 'European Union',
-         'LDC': 'Least Developed Countries',
-         'UMBRELLA': 'Umbrella Group'}
+        {'EARTH': ' Aggregated emissions for all countries',
+         'ANNEXI': ' Annex I Parties to the Convention',
+         'NONANNEXI': ' Non-Annex I Parties to the Convention',
+         'AOSIS': ' Alliance of Small Island States',
+         'BASIC': ' BASIC countries (Brazil, South Africa, India, and China)',
+         'EU28': ' European Union',
+         'LDC': ' Least Developed Countries',
+         'UMBRELLA': ' Umbrella Group'}
     )
 
     df['country'] = df['country'].replace(country_names)
@@ -561,15 +565,15 @@ date_range = st.sidebar.slider(
 
 countries = sorted(st.sidebar.multiselect(
     "Choose countries and/or regions",
-    list(set(df['country'])),
-    ['Aggregated emissions for all countries'],
+    sorted(list(set(df['country']))),
+    [' Aggregated emissions for all countries'],
     help='For a guide to available emissions regions,\
           please scroll down for the main text.'
 ))
 
 categories = sorted(st.sidebar.multiselect(
     "Choose emissions categories",
-    list(set(df['category'])),
+    sorted(list(set(df['category']))),
     # ['IPCM0EL: National Total excluding LULUCF']
     ['1: Energy',
      '2: Industrial Processes and Product Use (IPPU)',
