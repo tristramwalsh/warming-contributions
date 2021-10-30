@@ -761,7 +761,7 @@ elif not grouped_data_GWP.empty:  # for elegent error handling
 else:  # also for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value * 1.e9, True)
-c1a.metric(('cumulative emissions between' +
+c1a.metric(('cumulative emissions between ' +
            f'{date_range[0]}-{date_range[1]} (GWP100)'),
            # f'{value:.2E} Mt CO2-e',)
            f'{value}t CO\u2082-e')
