@@ -327,8 +327,8 @@ def calc(df, scenarios, countries, categories, entities,
 
     # Prepare the virtual csv files to output calculated things to
     column_names = ['scenario', 'country', 'category', 'entity', 'unit']
-    ny = future_co2_zero_year - 1750 + 1 if future_toggle else 2019 - 1750 + 1
-    PR_year = np.arange(ny) + 1750
+    ny = future_co2_zero_year - yr0 + 1 if future_toggle else yr1 - yr0 + 1
+    PR_year = np.arange(ny) + yr0
     column_names.extend([str(i) for i in PR_year])
     # Create in memory virtual csv to write temperatures to
     output_T = io.StringIO()
@@ -360,7 +360,7 @@ def calc(df, scenarios, countries, categories, entities,
                     (emis_to_calculate['country'] == country) &
                     (emis_to_calculate['category'] == category) &
                     (emis_to_calculate['entity'] == entity)
-                    ].transpose().loc['1750':]
+                    ].transpose().loc[str(yr0):]
 
                 # NOTE: PRIMARP doesn't have emissions timeseries for all
                 # combinations of scenario, country, category, entity.
@@ -373,12 +373,12 @@ def calc(df, scenarios, countries, categories, entities,
                     arr_timeseries = df_timeseries.values.squeeze() / 1.e6
 
                     if future_toggle:
-                        fut_yrs = np.arange(2020, future_co2_zero_year + 1)
+                        fut_yrs = np.arange(yr1 + 1, future_co2_zero_year + 1)
                         if entity == 'Carbon Dioxide':
                             arr_timeseries = np.append(
                                 arr_timeseries,
                                 np.linspace(arr_timeseries[-1], 0,
-                                            future_co2_zero_year-2019)
+                                            future_co2_zero_year-yr1)
                                 )
 
                         elif entity == 'Methane':
@@ -386,14 +386,14 @@ def calc(df, scenarios, countries, categories, entities,
                                 arr_timeseries,
                                 np.array([arr_timeseries[-1] *
                                           (1 + future_ch4_rate)**i
-                                          for i in fut_yrs-2019])
+                                          for i in fut_yrs-yr1])
                                 )
                         elif entity == 'Nitrous Oxide':
                             arr_timeseries = np.append(
                                 arr_timeseries,
                                 np.array([arr_timeseries[-1] *
                                          (1 + future_n2o_rate)**i
-                                         for i in fut_yrs-2019])
+                                         for i in fut_yrs-yr1])
                                 )
                     # Calculate the warming impact from the individual_series
 
@@ -555,8 +555,12 @@ d_set = side_expand.selectbox('Choose warming model',
 #           'PRIMAP-hist_v2.2_19-Jan-2021.csv')
 PR_url = ('https://zenodo.org/record/5494497/files/' +
           'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_20-Sep_2021.csv')
+# https://zenodo.org/record/5494497/files/Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_no_rounding_20-Sep_2021.csv?download=1
 
 df = load_data(PR_url)
+PRIMAP_years = [int(x) for x in df.columns if x.isdigit()]
+yr0 = min(PRIMAP_years)
+yr1 = max(PRIMAP_years)
 
 ####
 # WIDGETS FOR USERS TO SELECT DATA
@@ -591,9 +595,9 @@ else:
 
 date_range = st.sidebar.slider(
     "Choose Date Range",
-    min_value=1750,
-    max_value=future_co2_zero_year if future_toggle else 2019,
-    value=[1750, future_co2_zero_year] if future_toggle else [1750, 2019]
+    min_value=yr0,
+    max_value=future_co2_zero_year if future_toggle else yr1,
+    value=[yr0, future_co2_zero_year] if future_toggle else [yr0, yr1]
     )
 
 countries = sorted(st.sidebar.multiselect(
@@ -727,7 +731,7 @@ if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
-warming_start = date_range[0] if offset else 1750
+warming_start = date_range[0] if offset else yr0
 
 
 chart_1a = (
@@ -824,7 +828,7 @@ if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
-warming_start = date_range[0] if offset else 1750
+warming_start = date_range[0] if offset else yr0
 
 chart_1b = (
     alt.Chart(alt_data)
