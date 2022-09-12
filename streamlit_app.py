@@ -224,8 +224,8 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
 
     if letter:
         names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m',
-                '+00': ' ', '+0.0': ' ', '+3.0': ' k', '+6.0': ' M',
-                '+9.0': ' G', '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
+                 '+00': ' ', '+0.0': ' ', '+3.0': ' k', '+6.0': ' M',
+                 '+9.0': ' G', '+12.0': ' T', '+15.0': ' P', '+18.0': ' E'}
         return adjusted_mantissa_string + names[adjusted_exponent_string]
     else:
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
@@ -276,6 +276,7 @@ def load_data(file):
     df['scenario'] = df['scenario'].replace(scenario_names)
 
     category_names = {
+        '0': '0: Total',
         'M.0.EL': 'Total excluding LULUCF',
         '1': '1: Energy',
         '1.A': '1A: Fuel Combustion Activities',
@@ -294,9 +295,11 @@ def load_data(file):
                 Substances',
         '2.G': '2G: Other Product Manufacture and Use',
         '2.H': '2H: Other',
-        'M.AG': '3: Agriculture, sum of 3A and 3B',
+        '3': '3: Agriculture, Forestry, and Other Land Use',
         '3.A': '3A: Livestock',
+        'M.AG': '3: Agriculture, sum of 3A and 3B',
         'M.AG.ELV': '3B: Agriculture excluding Livestock',
+        'M.LULUCF': '3C: Land Use, Land Use Change, and Forestry',
         '4': '4: Waste',
         '5': '5: Other'}
     df['category'] = df['category'].replace(category_names)
@@ -490,7 +493,6 @@ def colour_range(domain, include_total, variable):
         else:
             print('PANIC')
 
-
         if len(domain) > 1 and include_total is True:
             # domain = list(grouped_data.index)
             # colour_map = plt.get_cmap(cm)
@@ -553,9 +555,12 @@ d_set = side_expand.selectbox('Choose warming model',
 #         'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 # PR_url = ('https://zenodo.org/record/4479172/files/' +
 #           'PRIMAP-hist_v2.2_19-Jan-2021.csv')
+# PR_url = ('https://zenodo.org/record/5494497/files/' +
+#           'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_20-Sep_2021.csv')
+
+# The no_rounding dataset variant includes LULUCF:
 PR_url = ('https://zenodo.org/record/5494497/files/' +
-          'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_20-Sep_2021.csv')
-# https://zenodo.org/record/5494497/files/Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_no_rounding_20-Sep_2021.csv?download=1
+          'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_no_rounding_20-Sep_2021.csv')
 
 df = load_data(PR_url)
 PRIMAP_years = [int(x) for x in df.columns if x.isdigit()]
@@ -610,11 +615,17 @@ countries = sorted(st.sidebar.multiselect(
 
 categories = sorted(st.sidebar.multiselect(
     "Choose emissions categories",
-    sorted(list(set(df['category']))),
-    # ['IPCM0EL: National Total excluding LULUCF']
+    sorted(list(set(df['category']) -
+                set(['3: Agriculture, sum of 3A and 3B']) -
+                set(['Total excluding LULUCF'])
+                )),
+                # Note that we remove the option to select the sub-level
+                # aggregation '3: Agriculture, sum of 3A and 3B' to reduce
+                # confusion.This aggregation is actually included directly in
+                # 2.3.1.
     ['1: Energy',
      '2: Industrial Processes and Product Use (IPPU)',
-     '3: Agriculture, sum of 3A and 3B',
+     '3: Agriculture, Forestry, and Other Land Use',
      '4: Waste',
      '5: Other'],
     help='For a guide to available emissions categories/sectors,\
@@ -625,7 +636,10 @@ categories = sorted(st.sidebar.multiselect(
 codes = [cat.split(':')[0] for cat in categories]
 double_counter = []
 if 'Total excluding LULUCF' in codes and len(codes) > 1:
-    double_counter.append('`Total excluding LULUCF` covers all (sub)categories')
+    double_counter.append(('`Total excluding LULUCF` covers all ' +
+                           '(sub)categories except LULUCF'))
+elif '0' in codes and len(codes) > 1:
+    double_counter.append('`0: Total` covers all (sub)categories')
 for code in codes:
     if len(code) > 1:
         if code[0] in codes:
@@ -1147,7 +1161,7 @@ list1.markdown("""
 #### Categories
 (the main categories and subsector divisions from the IPCC 2006 Guidelines for
 national greenhouse gas inventories [^IPCC 2006])
-- Total excluding LULUCF
+- 0: Total
     - 1: Energy
         - 1A: Fuel Combustion Activities
         - 1B: Fugitive Emissions from Fuels
@@ -1170,27 +1184,36 @@ national greenhouse gas inventories [^IPCC 2006])
                 of category 2)
         - 2G: Other Product Manufacture and Use
         - 2H: Other
-    - MAG: Agriculture, sum of 3A and 3B
+    - 3: Agriculture, Forestry, and Other Land Use*
         - 3A: Livestock
-        - 3B: Agriculture excluding Livestock
+        - 3B: Agriculture excluding Livestock*
+        - 3C: Land Use, Land Use Change, and Forestry (LULUCF)*
     - 4: Waste
     - 5: Other
 
+*these categories are aggregates implemented in PRIMAP-hist that differ
+slightly from the official IPCC 20006 Guidelines.
 """)
 list2.markdown(
     """
 #### Regions
-- All UNFCCC member states, as well as most non-UNFCCC territories [^ISO 3166-1 alpha-3]
+- All UNFCCC member states, as well as most non-UNFCCC territories\
+[^ISO 3166-1 alpha-3]
 
 - Additional groupings, including:
     - Aggregated emissions for all countries
-    - Annex I Parties to the Convention ([list](https://unfccc.int/parties-observers))
-    - Non-Annex I Parties to the Convention ([list](https://unfccc.int/parties-observers))
-    - Alliance fo Small Island States ([list](https://www.aosis.org/about/member-states/))
+    - Annex I Parties to the Convention\
+        ([list](https://unfccc.int/parties-observers))
+    - Non-Annex I Parties to the Convention\
+        ([list](https://unfccc.int/parties-observers))
+    - Alliance of Small Island States\
+        ([list](https://www.aosis.org/about/member-states/))
     - BASIC countries (Brazil, South Africa, India, and China)
-    - European Union post Brexit ([list](https://europa.eu/european-union/about-eu/countries_en))
+    - European Union post Brexit\
+        ([list](https://europa.eu/european-union/about-eu/countries_en))
     - Least Developed Countries
-    - Umbrella Group ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
+    - Umbrella Group\
+        ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
 
 #### Entities
 (the gases that dominantly contribute to global warming)
