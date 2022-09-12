@@ -207,7 +207,6 @@ def PR_emissions_units(df):
 
 def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
     """Return number in scientific form."""
-  
     exponent_template = "{:0>%d}" % exponent_pad
     mantissa_template = "{:.%df}" % num_decimals
 
@@ -240,14 +239,22 @@ def load_data(file):
 
     df = pd.read_csv(file)
 
+    # Rename labels in PRIMAP 2.3.1 to match those in PRIMAP 2.2
+    df.rename({'area (ISO3)': 'country',
+               'scenario (PRIMAP-hist)': 'scenario',
+               'category (IPCC2006_PRIMAP)': 'category'},
+              axis='columns', inplace=True)
+
     not_country = ['EARTH', 'ANNEXI', 'NONANNEXI', 'AOSIS',
-                   'BASIC', 'EU28', 'LDC', 'UMBRELLA']
+                   'BASIC', 'EU27BX', 'LDC', 'UMBRELLA']
     iso_country = list(set(df['country']) - set(not_country) - set(['ANT']))
 
     country_names = {x: pycountry.countries.get(alpha_3=x).name
                      for x in iso_country}
     country_names['ANT'] = 'Netherlands Antilles'
-    
+    # NB 'ANT' is handled separately as this isn't included in pycountry.
+
+
     # Note, the space at the beginning of the long names below is used so that
     # these group-style regions appear first in the multiselect box. It doesn't
     # affect display in plots.
@@ -257,7 +264,7 @@ def load_data(file):
          'NONANNEXI': ' Non-Annex I Parties to the Convention',
          'AOSIS': ' Alliance of Small Island States',
          'BASIC': ' BASIC countries (Brazil, South Africa, India, and China)',
-         'EU28': ' European Union',
+         'EU27BX': ' European Union post Brexit',
          'LDC': ' Least Developed Countries',
          'UMBRELLA': ' Umbrella Group'}
     )
@@ -269,29 +276,29 @@ def load_data(file):
     df['scenario'] = df['scenario'].replace(scenario_names)
 
     category_names = {
-        'IPCM0EL': 'Total excluding LULUCF',
-        'IPC1': '1: Energy',
-        'IPC1A': '1A: Fuel Combustion Activities',
-        'IPC1B': '1B: Fugitive Emissions from Fuels',
-        'IPC1B1': '1B1: Solid Fuels',
-        'IPC1B2': '1B2: Oil and Natural Gas',
-        'IPC1B3': '1B3: Other Emissions from Energy Production',
-        'IPC1C': '1C: Carbon Dioxide Transport and Storage',
-        'IPC2': '2: Industrial Processes and Product Use (IPPU)',
-        'IPC2A': '2A: Mineral Industry',
-        'IPC2B': '2B: Chemical Industry',
-        'IPC2C': '2C: Metal Industry',
-        'IPC2D': '2D: Non-Energy Products from Fuels and Solvent Use',
-        'IPC2E': '2E: Electronics Industry',
-        'IPC2F': '2F: Product uses as Substitutes for Ozone Depleting\
-                  Substances',
-        'IPC2G': '2G: Other Product Manufacture and Use',
-        'IPC2H': '2H: Other',
-        'IPCMAG': '3: Agriculture, sum of 3A and 3B',
-        'IPC3A': '3A: Livestock',
-        'IPCMAGELV': '3B: Agriculture excluding Livestock',
-        'IPC4': '4: Waste',
-        'IPC5': '5: Other'}
+        'M.0.EL': 'Total excluding LULUCF',
+        '1': '1: Energy',
+        '1.A': '1A: Fuel Combustion Activities',
+        '1.B': '1B: Fugitive Emissions from Fuels',
+        '1.B.1': '1B1: Solid Fuels',
+        '1.B.2': '1B2: Oil and Natural Gas',
+        '1.B.3': '1B3: Other Emissions from Energy Production',
+        '1.C': '1C: Carbon Dioxide Transport and Storage',
+        '2': '2: Industrial Processes and Product Use (IPPU)',
+        '2.A': '2A: Mineral Industry',
+        '2.B': '2B: Chemical Industry',
+        '2.C': '2C: Metal Industry',
+        '2.D': '2D: Non-Energy Products from Fuels and Solvent Use',
+        '2.E': '2E: Electronics Industry',
+        '2.F': '2F: Product uses as Substitutes for Ozone Depleting\
+                Substances',
+        '2.G': '2G: Other Product Manufacture and Use',
+        '2.H': '2H: Other',
+        'M.AG': '3: Agriculture, sum of 3A and 3B',
+        '3.A': '3A: Livestock',
+        'M.AG.ELV': '3B: Agriculture excluding Livestock',
+        '4': '4: Waste',
+        '5': '5: Other'}
     df['category'] = df['category'].replace(category_names)
 
     gas_names = {
@@ -320,11 +327,8 @@ def calc(df, scenarios, countries, categories, entities,
 
     # Prepare the virtual csv files to output calculated things to
     column_names = ['scenario', 'country', 'category', 'entity', 'unit']
-    ny = future_co2_zero_year - 1850 + 1 if future_toggle else 2018 - 1850 + 1
-    PR_year = np.arange(ny) + 1850
-    # st.write(future_toggle)
-    # st.write('ny', ny)
-    # st.write('PR_year', len(PR_year), PR_year)
+    ny = future_co2_zero_year - 1750 + 1 if future_toggle else 2019 - 1750 + 1
+    PR_year = np.arange(ny) + 1750
     column_names.extend([str(i) for i in PR_year])
     # Create in memory virtual csv to write temperatures to
     output_T = io.StringIO()
@@ -356,7 +360,7 @@ def calc(df, scenarios, countries, categories, entities,
                     (emis_to_calculate['country'] == country) &
                     (emis_to_calculate['category'] == category) &
                     (emis_to_calculate['entity'] == entity)
-                    ].transpose().loc['1850':]
+                    ].transpose().loc['1750':]
 
                 # NOTE: PRIMARP doesn't have emissions timeseries for all
                 # combinations of scenario, country, category, entity.
@@ -369,12 +373,12 @@ def calc(df, scenarios, countries, categories, entities,
                     arr_timeseries = df_timeseries.values.squeeze() / 1.e6
 
                     if future_toggle:
-                        fut_yrs = np.arange(2019, future_co2_zero_year + 1)
+                        fut_yrs = np.arange(2020, future_co2_zero_year + 1)
                         if entity == 'Carbon Dioxide':
                             arr_timeseries = np.append(
                                 arr_timeseries,
                                 np.linspace(arr_timeseries[-1], 0,
-                                            future_co2_zero_year-2018)
+                                            future_co2_zero_year-2019)
                                 )
 
                         elif entity == 'Methane':
@@ -547,8 +551,11 @@ d_set = side_expand.selectbox('Choose warming model',
 #     # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
 #     df = load_data(
 #         'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
-PR_url = ('https://zenodo.org/record/4479172/files/' +
-          'PRIMAP-hist_v2.2_19-Jan-2021.csv')
+# PR_url = ('https://zenodo.org/record/4479172/files/' +
+#           'PRIMAP-hist_v2.2_19-Jan-2021.csv')
+PR_url = ('https://zenodo.org/record/5494497/files/' +
+          'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_20-Sep_2021.csv')
+
 df = load_data(PR_url)
 
 ####
@@ -584,9 +591,9 @@ else:
 
 date_range = st.sidebar.slider(
     "Choose Date Range",
-    min_value=1850,
-    max_value=future_co2_zero_year if future_toggle else 2018,
-    value=[1850, future_co2_zero_year] if future_toggle else [1850, 2018]
+    min_value=1750,
+    max_value=future_co2_zero_year if future_toggle else 2019,
+    value=[1750, future_co2_zero_year] if future_toggle else [1750, 2019]
     )
 
 countries = sorted(st.sidebar.multiselect(
@@ -720,7 +727,7 @@ if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
-warming_start = date_range[0] if offset else 1850
+warming_start = date_range[0] if offset else 1750
 
 
 chart_1a = (
@@ -817,7 +824,7 @@ if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
-warming_start = date_range[0] if offset else 1850
+warming_start = date_range[0] if offset else 1750
 
 chart_1b = (
     alt.Chart(alt_data)
