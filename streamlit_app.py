@@ -1176,22 +1176,17 @@ national greenhouse gas inventories [^IPCC 2006])
 list2.markdown(
     """
 #### Regions
-- All UNFCCC member states, as well as most non-UNFCCC territories
-[^ISO 3166-1 alpha-3]
+- All UNFCCC member states, as well as most non-UNFCCC territories [^ISO 3166-1 alpha-3]
+
 - Additional groupings, including:
     - Aggregated emissions for all countries
-    - Annex I Parties to the Convention
-    ([list](https://unfccc.int/parties-observers))
-    - Non-Annex I Parties to the Convention
-    ([list](https://unfccc.int/parties-observers))
-    - Alliance fo Small Island States
-    ([list](https://www.aosis.org/about/member-states/))
+    - Annex I Parties to the Convention ([list](https://unfccc.int/parties-observers))
+    - Non-Annex I Parties to the Convention ([list](https://unfccc.int/parties-observers))
+    - Alliance fo Small Island States ([list](https://www.aosis.org/about/member-states/))
     - BASIC countries (Brazil, South Africa, India, and China)
-    - European Union
-    ([list](https://europa.eu/european-union/about-eu/countries_en))
+    - European Union post Brexit ([list](https://europa.eu/european-union/about-eu/countries_en))
     - Least Developed Countries
-    - Umbrella Group
-    ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
+    - Umbrella Group ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
 
 #### Entities
 (the gases that dominantly contribute to global warming)
@@ -1268,9 +1263,9 @@ logo5.image("https://drive.google.com/uc?export=view&id=1OGVCRwfaZTYPx3-LkcVx6qv
 st.caption("""
 ---
 
-[^Gütschow et al 2021]: Gütschow, J.; Günther, A.; Jeffery, L.; Gieseke, R.
-(2021): The PRIMAP-hist national historical emissions time series (1850-2018).
-v2.2. zenodo. Available from https://doi.org/10.5281/zenodo.4479172
+[^Gütschow et al 2021]: Gütschow, J.; Günther, A.; Pflüger, M. (2021):
+The PRIMAP-hist national historical emissions time series (1750-2019).
+v2.3.1. zenodo. https://doi.org/10.5281/zenodo.5494497
 
 [^IPCC AR5 WG1 (Myhre et al 2013)]: Myhre, G., D. Shindell, F.-M. Bréon,
 W. Collins, J. Fuglestvedt, J. Huang, D. Koch, J.-F. Lamarque, D. Lee,
@@ -1290,7 +1285,7 @@ Taka Hiraishi (Japan), William Irving (USA), and Thelma Krug (Brazil),
 Available from
 https://www.ipcc-nggip.iges.or.jp/public/2006gl/pdf/0_Overview/V0_1_Overview.pdf
 
-[^ISO 3166-1 alpha-3]: See
+[^ISO 3166-1 alpha-3] : See
 https://unstats.un.org/unsd/tradekb/knowledgebase/country-code, and
 https://en.wikipedia.org/wiki/ISO_3166-1_alpha-3 for more information.
 
