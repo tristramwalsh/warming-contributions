@@ -670,8 +670,6 @@ if len(double_counter) > 0:
     for double in double_counter:
         double_count_expander.write(f'- {double}')
 
-exceptions_slot = st.sidebar.empty()
-
 ####
 # IF 'IPCC AR5 Linear Impulse Response Model' DATA SELECTED,
 # CALCULATE TEMPERATURES
@@ -944,10 +942,10 @@ sankey_sg = prepare_data(df_T, scenarios, countries, categories, entities,
                          ['category', 'entity'], date_range, True, False)
 sankey_gc = prepare_data(df_T, scenarios, countries, categories, entities,
                          ['entity', 'country'], date_range, True, False)
+sankey_gcs = prepare_data(df_T, scenarios, countries, categories, entities,
+                          ['entity', 'country', 'category'],
+                          date_range, True, False)
 
-# snky_xpndr = st.expander('sankey data')
-# snky_xpndr.write(sankey_cs)
-# snky_xpndr.write(sankey_sg)
 middle = c4.selectbox('Choose the focused variable',
                       ['country', 'category', 'entity'], 1)
 labels = countries + categories + entities
@@ -962,7 +960,7 @@ for c in countries:
         try:
             values.append(sankey_cs.loc[(c, s), str(date_range[1])])
         except KeyError:
-            exceptions.append(f'(country): `{c}` & (category): `{s}`')
+            # exceptions.append(f'(country): `{c}` & (category): `{s}`')
             values.append(0)
 
 for s in categories:
@@ -972,7 +970,7 @@ for s in categories:
         try:
             values.append(sankey_sg.loc[(s, g), str(date_range[1])])
         except KeyError:
-            exceptions.append(f'(category): `{s}` & (entity): `{g}`')
+            # exceptions.append(f'(category): `{s}` & (entity): `{g}`')
             values.append(0)
 
 for g in entities:
@@ -982,16 +980,35 @@ for g in entities:
         try:
             values.append(sankey_gc.loc[(g, c), str(date_range[1])])
         except KeyError:
-            exceptions.append(f'(entity): `{g}` & (country): `{c}`')
+            # exceptions.append(f'(entity): `{g}` & (country): `{c}`')
             values.append(0)
+
+# The exceptions in the loops above only show connections in the sankey that
+# have no data; not the actual three-variable missing data. ie we might not
+# have data for UK + CH4 + LULUCF, but there might still be a connection
+# between UK + CH4 (due to other categories), and UK + LULUCF (due to other
+# gases), etc. Therefore to actually catchall exceptions we have to search
+# through separately in a new three-way seach. It might be faster to refactor
+# the three two-level for loops above into a single three-level nested loop.
+# For now this works though.
+for c in countries:
+    for s in categories:
+        for g in entities:
+            try:
+                _ = sankey_gcs.loc[(g, c, s)]
+            except KeyError:
+                exceptions.append(f'(country): `{c}` & ' +
+                                  f'(category): `{s}` & ' +
+                                  f'(entity): `{g}`')
+
 if len(exceptions) >= 1 and len(double_counter) == 0:
     st.sidebar.write('---')
 if len(exceptions) >= 1:
     # st.sidebar.warning('Watch Out: Some Emissions Missing')
     exceptions_expander = st.sidebar.expander('View Exceptions')
     exceptions_expander.write(
-        'This particular selected subset of the dataset contains\
-         no emissions data for the following combinations:')
+        f'This particular selected subset of the dataset contains\
+          no emissions data for the following {len(exceptions)} combinations:')
     for exception in exceptions:
         exceptions_expander.write(f'- {exception}')
 
