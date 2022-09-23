@@ -984,9 +984,9 @@ for g in entities:
         except KeyError:
             exceptions.append(f'(entity): `{g}` & (country): `{c}`')
             values.append(0)
-if len(exceptions) > 1 and len(double_counter) == 0:
+if len(exceptions) >= 1 and len(double_counter) == 0:
     st.sidebar.write('---')
-if len(exceptions) > 1:
+if len(exceptions) >= 1:
     # st.sidebar.warning('Watch Out: Some Emissions Missing')
     exceptions_expander = st.sidebar.expander('View Exceptions')
     exceptions_expander.write(
