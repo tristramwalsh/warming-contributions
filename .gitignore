@@ -132,3 +132,6 @@ dmypy.json
 # Note that this still allows for ./src/data/ to be tracked, which is where we
 # are storing the source code for acquiring, processing, and accessing the data
 /data/
+
+# Remove tracking for VScode workspace settings
+/.vscode/
