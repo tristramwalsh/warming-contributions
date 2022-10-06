@@ -277,7 +277,7 @@ def load_data(file):
 
     category_names = {
         '0': '0: Total',
-        'M.0.EL': 'Total excluding LULUCF',
+        'M.0.EL': '0: Total excluding LULUCF',
         '1': '1: Energy',
         '1.A': '1A: Fuel Combustion Activities',
         '1.B': '1B: Fugitive Emissions from Fuels',
@@ -577,6 +577,9 @@ scenarios = side_expand.selectbox(
     index=list(set(df['scenario'])).index('Prioritise Country-Reported Data')
 )
 
+LULUCF = side_expand.selectbox(
+    "Choose whether to enable LULUCF emissions",
+    ['Include LULUCF', 'Do Not Include LULUCF'], 1)
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
@@ -625,21 +628,37 @@ countries = sorted(st.sidebar.multiselect(
           please scroll down for the main text.'
 ))
 
+if LULUCF == 'Include LULUCF':
+    category_set = sorted(list(set(df['category']) -
+                               set(['3: Agriculture, sum of 3A and 3B']) -
+                               set(['0: Total excluding LULUCF'])
+                               ))
+    # Note that we remove the option to select the sub-level aggregation
+    # '3: Agriculture, sum of 3A and 3B' to reduce confusion.This aggregation
+    # is actually included directly in 2.3.1.
+    category_default = ['1: Energy',
+                        '2: Industrial Processes and Product Use (IPPU)',
+                        '3: Agriculture, Forestry, and Other Land Use',
+                        '4: Waste',
+                        '5: Other']
+elif LULUCF == 'Do Not Include LULUCF':
+    category_set = sorted(list(set(df['category']) -
+                               set(['3: Agriculture, Forestry, and Other Land Use']) -
+                               set(['Total'])
+                               ))
+    # Note that we remove the option to select the sub-level aggregation
+    # '3: Agriculture, Forestry, and Other Land Use' to reduce confusion. This
+    # aggregation is actually included directly in 2.3.1.
+    category_default = ['1: Energy',
+                        '2: Industrial Processes and Product Use (IPPU)',
+                        '3: Agriculture, sum of 3A and 3B',
+                        '4: Waste',
+                        '5: Other']
+
+
 categories = sorted(st.sidebar.multiselect(
     "Choose emissions categories",
-    sorted(list(set(df['category']) -
-                set(['3: Agriculture, sum of 3A and 3B']) -
-                set(['Total excluding LULUCF'])
-                )),
-                # Note that we remove the option to select the sub-level
-                # aggregation '3: Agriculture, sum of 3A and 3B' to reduce
-                # confusion.This aggregation is actually included directly in
-                # 2.3.1.
-    ['1: Energy',
-     '2: Industrial Processes and Product Use (IPPU)',
-     '3: Agriculture, Forestry, and Other Land Use',
-     '4: Waste',
-     '5: Other'],
+    category_set, category_default,
     help='For a guide to available emissions categories/sectors,\
           please scroll down for the main text.'
 
