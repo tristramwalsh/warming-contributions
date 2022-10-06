@@ -1109,15 +1109,16 @@ future emissions.**
 
 
 The goals of the Paris Agreement open with:
-> 1. This Agreement, in enhancing the implementation of the Convention,
-including its objective, aims to strengthen the global response to the threat
-of climate change, in the context of sustainable development and efforts to
-eradicate poverty, including by:
 
-> a. holding the increase in the global average temperature to well below 2°C
-above pre-industrial levels and pursuing efforts to limit the temperature
-increase to 1.5°C above pre-industrial levels, recognizing that this would
-significantly reduce the risks and impacts of climate change
+> This Agreement, in enhancing the implementation of the Convention,
+> including its objective, aims to strengthen the global response to the threat
+> of climate change, in the context of sustainable development and efforts to
+> eradicate poverty, including by:
+> 
+> holding the increase in the global average temperature to well below 2°C
+> above pre-industrial levels and pursuing efforts to limit the temperature
+> increase to 1.5°C above pre-industrial levels, recognizing that this would
+> significantly reduce the risks and impacts of climate change
 
 The fundamental question of the climate crisis is not how to reduce emissions,
 but how to reduce the risks and negative impacts consequent of global warming
