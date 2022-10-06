@@ -319,9 +319,11 @@ def calc(df, scenarios, countries, categories, entities,
          future_toggle, future_co2_zero_year,
          future_ch4_rate, future_n2o_rate):
     """Calculate warming impact, and GWP emissions, for given selection."""
+    
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'Carbon Dioxide': 1., 'Methane': 28., 'Nitrous Oxide': 265.}
 
+    # Collect the emissions timeseries that we want to calculate warming from
     emis_to_calculate = df[
                     (df['scenario'] == scenarios) &
                     (df['country'].isin(countries)) &
@@ -351,7 +353,7 @@ def calc(df, scenarios, countries, categories, entities,
         for category in categories:
             for entity in entities:
 
-                #  Visually show how far through the calculation we are
+                # Visually show how far through the calculation we are
                 # name = f'{scenarios}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
                 loading_bar = percentage // 5*'.' + (20 - percentage // 5)*' '
@@ -398,12 +400,47 @@ def calc(df, scenarios, countries, categories, entities,
                                          (1 + future_n2o_rate)**i
                                          for i in fut_yrs-yr1])
                                 )
+                    
                     # Calculate the warming impact from the individual_series
 
                     # ti = dt.datetime.now()
                     temp = ETmod(ny, a_params(entity)) @ arr_timeseries
                     # tj = dt.datetime.now()
                     # times_calc.append(tj-ti)
+
+                    if 'Absolute Temperature Change' in temp_calc_method:
+                        # The temperature profile above is the temperature
+                        # required
+                        pass
+
+                    ###########################################################
+                    #### PICK BETWEEN THE TWO METHODS OF CALCULATING TEMPS
+                    ###########################################################
+                    elif 'Relative Temperature Change' in temp_calc_method:
+                        # Here we calculate the reative temperature response,
+                        # defined as the difference between the temperature
+                        # of the "real world" and the temperature of a
+                        # counterfactual world where emissions stop in baseline
+                        # year. For the period before the baseline, we 
+                        # filter = np.array([1 if int(x) < int(baseline) else 0
+                        #                    for x in df_timeseries.index])
+                        filter = np.array(
+                            [1 if int(x) < int(baseline) else 0
+                            for x in (np.arange(len(arr_timeseries)) + 1750)])
+                        arr_timeseries2 = arr_timeseries * filter
+
+                        # temp_c stands for temperature in counterfactual world
+                        temp_c = ETmod(ny, a_params(entity)) @ arr_timeseries2
+                        
+                        # In the first approach below, we simply call relative
+                        # emissions 0 in the years before the baseline.
+                        # temp = temp-temp_stop
+                        
+                        # In this second approach option, backtrack before the
+                        # baseline year with the absolute historical
+                        # temperature response
+                        temp = ((temp-temp_c) * (1-filter) +
+                                (temp - temp[int(baseline) - 1750]) * filter)
 
                     # Create dictionary with the new temp data in
                     new_row = {'scenario': scenarios,
@@ -462,15 +499,16 @@ def prepare_data(df, scenarios, countries, categories, entities,
 
     # If baseline given, subtract temperature average of baseline range from
     # the rest of the timeseries
-
-    baseline = False if baseline == '1750' else baseline
-    
     if baseline and not df.empty:
         # baseline_tuple = [int(x) for x in baseline.split('-')]
-        baseline_years = [str(x) for x in
-                          range(int(baseline.split('-')[0]),
-                                int(baseline.split('-')[1]) + 1)]
-        pre_ind_temps = grouped_data[baseline_years].mean(axis=1)
+        if '-' in baseline:
+            baseline_years = [str(x) for x in
+                            range(int(baseline.split('-')[0]),
+                                    int(baseline.split('-')[1]) + 1)]
+            pre_ind_temps = grouped_data[baseline_years].mean(axis=1)
+        elif '-' not in baseline:
+            pre_ind_temps = grouped_data[baseline]
+
         grouped_data = grouped_data.sub(pre_ind_temps, axis='index')
 
     # Restrict the data to just that selected by the data_range slider
@@ -589,9 +627,23 @@ LULUCF = side_expand.selectbox(
     ['Include LULUCF', 'Do Not Include LULUCF'], 1,
     help='Only use with caution; see PRIMAP-hist documentation for details')
 
-baseline = side_expand.selectbox(
-    "Choose period for temperature baseline",
-    ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
+temp_calc_method = side_expand.selectbox(
+    "Choose temperature calculation method",
+    ['Absolute Temperature Change (from Preindustrial Baseline)',
+     'Relative Temperature Change (to Emissions Stopping in Baseline Year)'],
+    0)
+
+if 'Absolute Temperature Change' in temp_calc_method:
+    baseline = side_expand.selectbox(
+        "Choose period for temperature baseline",
+        ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
+if 'Relative Temperature Change' in temp_calc_method:
+    baseline = str(side_expand.slider(
+        "Choose baseline year when emissions cease",
+        min_value=yr0,
+        max_value=yr1,
+        value=1750
+        ))
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
@@ -961,7 +1013,7 @@ elif not grouped_data.empty:  # for elegent error handling
 else:  # also for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value, True)
-c1b.metric(f'net warming between in {date_range[1]} relative to {baseline}',
+c1b.metric(f'net warming in {date_range[1]} relative to {baseline}',
            # f'{value:.2E}°C',
            f'{value} °C')
 
