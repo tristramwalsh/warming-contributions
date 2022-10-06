@@ -582,14 +582,26 @@ future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
                                        value=False)
 if future_toggle:
+    # future_co2_zero_year = future_expand.slider(
+    #     'Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
+    # future_ch4_rate = future_expand.slider(
+    #     'Change in CH4 emissions by 2030 (%)', -10., 0., -2.2,
+    #     step=0.1, format='%f') / 100
+    # future_n2o_rate = future_expand.slider(
+    #     'Change in N2O emissions by 2030 (%)', -10., 0., -0.7,
+    #     step=0.1, format='%f') / 100
+    
     future_co2_zero_year = future_expand.slider(
         'Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
-    future_ch4_rate = future_expand.slider(
-        'Annual change in CH4 emissions (%)', -10., 0., -2.2,
-        step=0.1, format='%f') / 100
-    future_n2o_rate = future_expand.slider(
-        'Annual change in N2O emissions (%)', -10., 0., -0.7,
-        step=0.1, format='%f') / 100
+    interim_ch4_rate = future_expand.slider(
+        'Change in CH4 emissions by 2030 (%)', -90, 0, -40,
+        step=1, format='%f') / 100
+    interim_n2o_rate = future_expand.slider(
+        'Change in N2O emissions by 2030 (%)', -90, 0, -15,
+        step=1, format='%f') / 100
+    future_ch4_rate = (1 + interim_ch4_rate)**(1/(2030-yr1)) - 1
+    future_n2o_rate = (1 + interim_ch4_rate)**(1/(2030-yr1)) - 1
+
 else:
     future_co2_zero_year = None
     future_ch4_rate = None
