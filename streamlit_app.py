@@ -450,7 +450,7 @@ def calc(df, scenarios, countries, categories, entities,
 
 @st.cache(show_spinner=False)
 def prepare_data(df, scenarios, countries, categories, entities,
-                 dis_aggregation, date_range, offset, include_total):
+                 dis_aggregation, date_range, baseline, include_total):
     """Group, time-slice, offset, and calculate sum as required."""
     data = df[(df['scenario'] == scenarios) &
               (df['country'].isin(countries)) &
@@ -460,14 +460,21 @@ def prepare_data(df, scenarios, countries, categories, entities,
     # Group data
     grouped_data = data.groupby(dis_aggregation).sum()
 
-    # Restrict the data to just that selected by the slider
-    grouped_data = grouped_data.loc[:, str(date_range[0]):str(date_range[1])]
-
-    # If offset selected, subtract temperature at beginning of date range from
+    # If baseline given, subtract temperature average of baseline range from
     # the rest of the timeseries
-    if offset and not df.empty:
-        start_temps = grouped_data[str(date_range[0])]
-        grouped_data = grouped_data.sub(start_temps, axis='index')
+
+    baseline = False if baseline == '1750' else baseline
+    
+    if baseline and not df.empty:
+        # baseline_tuple = [int(x) for x in baseline.split('-')]
+        baseline_years = [str(x) for x in
+                          range(int(baseline.split('-')[0]),
+                                int(baseline.split('-')[1]) + 1)]
+        pre_ind_temps = grouped_data[baseline_years].mean(axis=1)
+        grouped_data = grouped_data.sub(pre_ind_temps, axis='index')
+
+    # Restrict the data to just that selected by the data_range slider
+    grouped_data = grouped_data.loc[:, str(date_range[0]):str(date_range[1])]
 
     # Add 'SUM' of data to data, if there are multiple lines
     if grouped_data.shape[0] > 1 and include_total is True:
@@ -582,6 +589,10 @@ LULUCF = side_expand.selectbox(
     ['Include LULUCF', 'Do Not Include LULUCF'], 1,
     help='Only use with caution; see PRIMAP-hist documentation for details')
 
+baseline = side_expand.selectbox(
+    "Choose period for temperature baseline",
+    ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
+
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
                                        value=False)
@@ -618,7 +629,7 @@ date_range = st.sidebar.slider(
     "Choose Date Range",
     min_value=yr0,
     max_value=future_co2_zero_year if future_toggle else yr1,
-    value=[yr0, future_co2_zero_year] if future_toggle else [yr0, yr1]
+    value=[1850, future_co2_zero_year] if future_toggle else [1850, yr1]
     )
 
 countries = sorted(st.sidebar.multiselect(
@@ -731,9 +742,9 @@ dis_aggregation = c2.selectbox(
 # aggregated = sorted(list(set(['country', 'category', 'entity']) -
 #                         set([dis_aggregation])))
 
-offset = c2.checkbox(
-    f"Calculate warming relative to selected start year {date_range[0]}?",
-    value=False)
+# offset = c2.checkbox(
+#     f"Calculate warming relative to selected start year {date_range[0]}?",
+#     value=False)
 
 c2.caption("""
 The timeseries depict annual emissions and the global temperature change
@@ -775,9 +786,6 @@ if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
-warming_start = date_range[0] if offset else yr0
-
-
 chart_1a = (
     alt.Chart(alt_data)
        .mark_line(opacity=0.9)
@@ -802,7 +810,7 @@ chart_1a2 = (alt.Chart(bar_data, height=50).mark_bar(opacity=0.9).encode(
                     legend=None),
     x=alt.X('sum(GWP):Q', stack="normalize", axis=alt.Axis(
         domain=False, ticks=False, labels=False),
-            title=('cumulative emissions breakdown between' +
+            title=('cumulative emissions breakdown between ' +
                    f'{date_range[0]}-{date_range[1]}')),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
@@ -816,7 +824,7 @@ chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
                     legend=None),
     x=alt.X('sum(GWP):Q', stack="normalize", axis=alt.Axis(
                 domain=False, ticks=False, labels=False),
-            title=('cumulative emissions breakdown between' +
+            title=('cumulative emissions breakdown between ' +
                    f'{earliest_year}-{date_range[1]}')),
     tooltip=[(dis_aggregation + ':N'), 'sum(GWP):Q'])
     .configure_axis(grid=False)
@@ -853,7 +861,7 @@ c1a.metric(('cumulative emissions between ' +
 # CREATE WARMING PLOT
 include_sum = True
 grouped_data = prepare_data(df_T, scenarios, countries, categories, entities,
-                            dis_aggregation, date_range, offset, include_sum)
+                            dis_aggregation, date_range, baseline, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
 alt_data = (grouped_data.T
@@ -871,8 +879,6 @@ c_domain = sorted(list(grouped_data.index))
 if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
-
-warming_start = date_range[0] if offset else yr0
 
 chart_1b = (
     alt.Chart(alt_data)
@@ -907,8 +913,9 @@ chart_1b2 = (alt.Chart(bar_data[bar_data['year'] == date_range[1]], height=50)
                                 stack='normalize',
                                 axis=alt.Axis(
                                     domain=False, ticks=False, labels=False),
-                                title=('temperature change breakdown between' +
-                                       f'{warming_start}-{date_range[1]}')),
+                                title=('temperature change breakdown in ' +
+                                       f'{date_range[1]} ' +
+                                       f'relative to {baseline}')),
                         color=alt.Color(dis_aggregation,
                         scale=alt.Scale(domain=c_domain, range=c_range),
                         legend=None),
@@ -925,7 +932,7 @@ bar_keys = pd.DataFrame(bar_keys, columns=[dis_aggregation, 'warming'])
 chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
     x=alt.X('warming:Q', stack='normalize',
             axis=alt.Axis(domain=False, ticks=False, labels=False),
-            title=('temperature change breakdown between' +
+            title=('temperature change breakdown between ' +
                    f'{earliest_year}-{date_range[1]}')),
     color=alt.Color(dis_aggregation,
                     scale=alt.Scale(domain=c_domain, range=c_range),
@@ -935,7 +942,7 @@ chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
 )
 
 
-c1b.subheader(f'warming relative to {warming_start} (°C)')
+c1b.subheader(f'warming relative to {baseline} (°C)')
 chart_1b = (chart_1b
             .configure_legend(orient='top-left')
             .configure_axis(grid=False)
@@ -954,7 +961,7 @@ elif not grouped_data.empty:  # for elegent error handling
 else:  # also for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value, True)
-c1b.metric(f'net warming between {warming_start}-{date_range[1]}',
+c1b.metric(f'net warming between in {date_range[1]} relative to {baseline}',
            # f'{value:.2E}°C',
            f'{value} °C')
 
@@ -963,20 +970,18 @@ c1b.metric(f'net warming between {warming_start}-{date_range[1]}',
 ####
 c3, c4 = st.columns([3.5, 1])
 c4.subheader(' ')
-
-# NOTE: We force the offset to the start of the selected date range, so this
-# plot will always show the warming between the two dates in the range. This
-# seems like intuitive behaviour. Therefore, the offset only applies to the
-# line chart to change the relateive start date for that...
+# NOTE: We now count warming as relative to the baseline (not the start year
+# of the selected date_range), in anticipation of arbitrary start date being
+# included in the second relative-warming calculation approach.
 sankey_cs = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['country', 'category'], date_range, True, False)
+                         ['country', 'category'], date_range, baseline, False)
 sankey_sg = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['category', 'entity'], date_range, True, False)
+                         ['category', 'entity'], date_range, baseline, False)
 sankey_gc = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['entity', 'country'], date_range, True, False)
+                         ['entity', 'country'], date_range, baseline, False)
 sankey_gcs = prepare_data(df_T, scenarios, countries, categories, entities,
                           ['entity', 'country', 'category'],
-                          date_range, True, False)
+                          date_range, baseline, False)
 
 middle = c4.selectbox('Choose the focused variable',
                       ['country', 'category', 'entity'], 1)
@@ -1098,7 +1103,7 @@ fig = go.Figure(data=[go.Sankey(
             align='left', showarrow=False, x=0.0, y=1.0)
     ]))
 
-sankey_title = f'warming between {date_range[0]} and {date_range[1]} (°C)'
+sankey_title = f'warming between in {date_range[1]} relative to {baseline} (°C)'
 c3.subheader(sankey_title)
 fig.update_layout(
     # font=dict(size=10),
