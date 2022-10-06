@@ -434,13 +434,13 @@ def calc(df, scenarios, countries, categories, entities,
                         
                         # In the first approach below, we simply call relative
                         # emissions 0 in the years before the baseline.
-                        # temp = temp-temp_stop
+                        # temp = temp-temp_c
                         
                         # In this second approach option, backtrack before the
                         # baseline year with the absolute historical
                         # temperature response
-                        temp = ((temp-temp_c) * (1-filter) +
-                                (temp - temp[int(baseline) - 1750]) * filter)
+                        temp = ((temp-temp_c) +
+                                filter * (temp - temp[int(baseline) - 1750]))
 
                     # Create dictionary with the new temp data in
                     new_row = {'scenario': scenarios,
