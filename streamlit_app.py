@@ -579,7 +579,8 @@ scenarios = side_expand.selectbox(
 
 LULUCF = side_expand.selectbox(
     "Choose whether to enable LULUCF emissions",
-    ['Include LULUCF', 'Do Not Include LULUCF'], 1)
+    ['Include LULUCF', 'Do Not Include LULUCF'], 1,
+    help='Only use with caution; see PRIMAP-hist documentation for details')
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
@@ -644,7 +645,7 @@ if LULUCF == 'Include LULUCF':
 elif LULUCF == 'Do Not Include LULUCF':
     category_set = sorted(list(set(df['category']) -
                                set(['3: Agriculture, Forestry, and Other Land Use']) -
-                               set(['Total'])
+                               set(['0: Total'])
                                ))
     # Note that we remove the option to select the sub-level aggregation
     # '3: Agriculture, Forestry, and Other Land Use' to reduce confusion. This
