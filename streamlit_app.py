@@ -315,7 +315,7 @@ def load_data(file):
 
 
 @st.cache(show_spinner=False, suppress_st_warning=True)
-def calc(df, scenarios, countries, categories, entities,
+def calc(df, scenarios, countries, categories, entities, baseline,
          future_toggle, future_co2_zero_year,
          future_ch4_rate, future_n2o_rate):
     """Calculate warming impact, and GWP emissions, for given selection."""
@@ -410,8 +410,27 @@ def calc(df, scenarios, countries, categories, entities,
 
                     if 'Absolute Temperature Change' in temp_calc_method:
                         # The temperature profile above is the temperature
-                        # required
-                        pass
+                        # required.
+
+                        # Apply the baseline subtraction
+                        if '-' in baseline:
+                            filter = np.array(
+                                [1 if (int(baseline.split('-')[0]) < int(y) <
+                                       int(baseline.split('-')[1]))
+                                 else 0
+                                 for y
+                                 in (np.arange(len(arr_timeseries)) + yr0)])
+                            pre_ind_temp = (temp * filter).mean()
+                            
+                        elif '-' not in baseline:
+                            filter = np.array(
+                                [1 if int(y) == int(baseline)
+                                 else 0
+                                 for y
+                                 in (np.arange(len(arr_timeseries)) + yr0)])
+                            pre_ind_temp = (temp * filter).mean()
+                            
+                        temp = temp - pre_ind_temp
 
                     ###########################################################
                     #### PICK BETWEEN THE TWO METHODS OF CALCULATING TEMPS
@@ -426,7 +445,7 @@ def calc(df, scenarios, countries, categories, entities,
                         #                    for x in df_timeseries.index])
                         filter = np.array(
                             [1 if int(x) < int(baseline) else 0
-                             for x in (np.arange(len(arr_timeseries)) + 1750)])
+                             for x in (np.arange(len(arr_timeseries)) + yr0)])
                         arr_timeseries2 = arr_timeseries * filter
 
                         # temp_c stands for temperature in counterfactual world
@@ -440,7 +459,7 @@ def calc(df, scenarios, countries, categories, entities,
                         # baseline year with the absolute historical
                         # temperature response
                         temp = ((temp-temp_c) +
-                                filter * (temp - temp[int(baseline) - 1750]))
+                                filter * (temp - temp[int(baseline) - yr0]))
 
                     # Create dictionary with the new temp data in
                     new_row = {'scenario': scenarios,
@@ -487,8 +506,8 @@ def calc(df, scenarios, countries, categories, entities,
 
 @st.cache(show_spinner=False)
 def prepare_data(df, scenarios, countries, categories, entities,
-                 dis_aggregation, date_range, baseline, include_total):
-    """Group, time-slice, offset, and calculate sum as required."""
+                 dis_aggregation, date_range, include_total):
+    """Group, time-slice, and calculate sum as required."""
     data = df[(df['scenario'] == scenarios) &
               (df['country'].isin(countries)) &
               (df['category'].isin(categories)) &
@@ -496,20 +515,6 @@ def prepare_data(df, scenarios, countries, categories, entities,
 
     # Group data
     grouped_data = data.groupby(dis_aggregation).sum()
-
-    # If baseline given, subtract temperature average of baseline range from
-    # the rest of the timeseries
-    if baseline and not df.empty:
-        # baseline_tuple = [int(x) for x in baseline.split('-')]
-        if '-' in baseline:
-            baseline_years = [str(x) for x in
-                            range(int(baseline.split('-')[0]),
-                                    int(baseline.split('-')[1]) + 1)]
-            pre_ind_temps = grouped_data[baseline_years].mean(axis=1)
-        elif '-' not in baseline:
-            pre_ind_temps = grouped_data[baseline]
-
-        grouped_data = grouped_data.sub(pre_ind_temps, axis='index')
 
     # Restrict the data to just that selected by the data_range slider
     grouped_data = grouped_data.loc[:, str(date_range[0]):str(date_range[1])]
@@ -771,12 +776,12 @@ if len(double_counter) > 0:
 ####
 if d_set == 'IPCC AR5 Linear Impulse Response Model':
     df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
-                        future_toggle, future_co2_zero_year,
+                        baseline, future_toggle, future_co2_zero_year,
                         future_ch4_rate, future_n2o_rate)
 
 # CHECK DATA AVAILABLE
-if prepare_data(df_GWP, scenarios, countries, categories, entities,
-                'country', date_range, False, False).empty:
+if prepare_data(df_GWP, scenarios, countries, categories, entities, 'country',
+                date_range, False).empty:
     st.warning('No emissions data available for this selection')
 
 ####
@@ -819,8 +824,7 @@ large warming and large cooling will therefore have similar sized bars.
 include_sum = True
 grouped_data_GWP = prepare_data(df_GWP,
                                 scenarios, countries, categories, entities,
-                                dis_aggregation, date_range, False,
-                                include_sum)
+                                dis_aggregation, date_range, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
 alt_data = (grouped_data_GWP.T
@@ -915,7 +919,7 @@ c1a.metric(('cumulative emissions between ' +
 # CREATE WARMING PLOT
 include_sum = True
 grouped_data = prepare_data(df_T, scenarios, countries, categories, entities,
-                            dis_aggregation, date_range, baseline, include_sum)
+                            dis_aggregation, date_range, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
 alt_data = (grouped_data.T
@@ -1028,14 +1032,14 @@ c4.subheader(' ')
 # of the selected date_range), in anticipation of arbitrary start date being
 # included in the second relative-warming calculation approach.
 sankey_cs = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['country', 'category'], date_range, baseline, False)
+                         ['country', 'category'], date_range, False)
 sankey_sg = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['category', 'entity'], date_range, baseline, False)
+                         ['category', 'entity'], date_range, False)
 sankey_gc = prepare_data(df_T, scenarios, countries, categories, entities,
-                         ['entity', 'country'], date_range, baseline, False)
+                         ['entity', 'country'], date_range, False)
 sankey_gcs = prepare_data(df_T, scenarios, countries, categories, entities,
                           ['entity', 'country', 'category'],
-                          date_range, baseline, False)
+                          date_range, False)
 
 middle = c4.selectbox('Choose the focused variable',
                       ['country', 'category', 'entity'], 1)
