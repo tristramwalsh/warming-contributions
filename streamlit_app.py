@@ -355,7 +355,9 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     csv_writer_E.writeheader()
 
     t1 = dt.datetime.now()
-    # times_calc, times_csv = [], []
+    
+    fe_matrix = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide')))
+    
     i = 1
     number_of_series = len(countries) * len(categories) * len(entities)
     calc_text.text('calculating...')
@@ -483,7 +485,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                         EMIS = arr_timeseries * gwp[entity]
                         unit = 'GWP GtC CO2-e yr-1'
                     elif emissions_units == 'CO2-fe':
-                        EMIS = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide'))) @ EFmod(ny, a_params(entity)) @ arr_timeseries
+                        EMIS = fe_matrix @ EFmod(ny, a_params(entity)) @ arr_timeseries
                         unit = 'GtCO2-fe yr-1'
                     elif emissions_units == 'Absolute Mass':
                         EMIS = arr_timeseries
