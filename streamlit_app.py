@@ -1421,7 +1421,8 @@ with st.expander(
 
     **CO2-fe** is CO2-forcing-equivalent emissions, ie the CO2 emissions
     timeseries that would result in the same forcing as the specified emissions
-    timeseries of any greenhouse gas.
+    timeseries of any greenhouse gas. These are calculated using an inverted
+    version of the selected climate model.
     """)
 
 st.markdown(
