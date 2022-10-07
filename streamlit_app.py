@@ -619,7 +619,7 @@ scenarios = side_expand.selectbox(
     "Choose historical emissions prioritisation",
     list(set(df['scenario'])),
     # index=list(set(df['scenario'])).index('HISTCR')
-    index=list(set(df['scenario'])).index('Prioritise Country-Reported Data')
+    index=list(set(df['scenario'])).index('Prioritise Third-Party Data')
 )
 
 LULUCF = side_expand.selectbox(
@@ -632,18 +632,6 @@ temp_calc_method = side_expand.selectbox(
     ['Absolute Temperature Change (from Preindustrial Baseline)',
      'Relative Temperature Change (to Emissions Stopping in Baseline Year)'],
     0)
-
-# if 'Absolute Temperature Change' in temp_calc_method:
-#     baseline = side_expand.selectbox(
-#         "Choose period for temperature baseline",
-#         ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
-# if 'Relative Temperature Change' in temp_calc_method:
-#     baseline = str(side_expand.slider(
-#         "Choose baseline year when emissions cease",
-#         min_value=yr0,
-#         max_value=yr1,
-#         value=1750
-#         ))
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
@@ -680,13 +668,13 @@ else:
 if 'Absolute Temperature Change' in temp_calc_method:
     baseline = st.sidebar.selectbox(
         "Choose period for temperature baseline",
-        ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
+        ['1850-1900', '1750-1800', '1750'], 0)
 if 'Relative Temperature Change' in temp_calc_method:
     baseline = str(st.sidebar.slider(
         "Choose baseline year for relative temperature change",
         min_value=yr0,
         max_value=yr1,
-        value=1750
+        value=1875
         ))
 
 date_range = st.sidebar.slider(
@@ -1272,80 +1260,84 @@ the contributions to historical warming, however **double counting is possible
 if you select both a group and any of its subgroups:** for example, selecting
 'IPC1' and 'IPC1A' will double count 'IPC1A' in the calculations; selecting
 'European Union' and 'France' will double count 'France' in the calculations.
-
-### Which contributors to temperature change are included
-
 """)
 
-list1, list2 = st.columns(2)
-list1.markdown("""
-#### Categories
-(the main categories and subsector divisions from the IPCC 2006 Guidelines for
-national greenhouse gas inventories [^IPCC 2006])
-- 0: Total
-    - 1: Energy
-        - 1A: Fuel Combustion Activities
-        - 1B: Fugitive Emissions from Fuels
-            - 1B1: Solid Fuels
-            - 1B2: Oil and Natural Gas
-            - 1B3: Other Emissions from Energy Production
-        - 1C: Carbon Dioxide Transport and Storage (currently no\
-            data available)
-    - 2: Industrial Processes and Product Use (IPPU)
-        - 2A: Mineral Industry
-        - 2B: Chemical Industry
-        - 2C: Metal Industry
-        - 2D: Non-Energy Products from Fuels and Solvent Use
-        - 2E: Electronics Industry (no data available as the\
-                category is only used for fluorinated gases which are only\
-                resolved at the level of category 2)
-        - 2F: Product uses as Substitutes for Ozone Depleting\
-                Substances (no data available as the category is only used\
-                for fluorinated gases which are only resolved at the level\
-                of category 2)
-        - 2G: Other Product Manufacture and Use
-        - 2H: Other
-    - 3: Agriculture, Forestry, and Other Land Use*
-        - 3A: Livestock
-        - 3B: Agriculture excluding Livestock*
-        - 3C: Land Use, Land Use Change, and Forestry (LULUCF)*
-    - 4: Waste
-    - 5: Other
+with st.expander(
+    'Which contributors to temperature change are included'):
 
-*these categories are aggregates implemented in PRIMAP-hist that differ
-slightly from the official IPCC 20006 Guidelines.
-""")
-list2.markdown(
-    """
-#### Regions
-- All UNFCCC member states, as well as most non-UNFCCC territories\
-[^ISO 3166-1 alpha-3]
+# expand_emissions.markdown("""
+# ### Which contributors to temperature change are included
+# """)
 
-- Additional groupings, including:
-    - Aggregated emissions for all countries
-    - Annex I Parties to the Convention\
-        ([list](https://unfccc.int/parties-observers))
-    - Non-Annex I Parties to the Convention\
-        ([list](https://unfccc.int/parties-observers))
-    - Alliance of Small Island States\
-        ([list](https://www.aosis.org/about/member-states/))
-    - BASIC countries (Brazil, South Africa, India, and China)
-    - European Union post Brexit\
-        ([list](https://europa.eu/european-union/about-eu/countries_en))
-    - Least Developed Countries
-    - Umbrella Group\
-        ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
+    list1, list2 = st.columns(2)
+    list1.markdown("""
+    #### Categories
+    (the main categories and subsector divisions from the IPCC 2006 Guidelines for
+    national greenhouse gas inventories [^IPCC 2006])
+    - 0: Total
+        - 1: Energy
+            - 1A: Fuel Combustion Activities
+            - 1B: Fugitive Emissions from Fuels
+                - 1B1: Solid Fuels
+                - 1B2: Oil and Natural Gas
+                - 1B3: Other Emissions from Energy Production
+            - 1C: Carbon Dioxide Transport and Storage (currently no\
+                data available)
+        - 2: Industrial Processes and Product Use (IPPU)
+            - 2A: Mineral Industry
+            - 2B: Chemical Industry
+            - 2C: Metal Industry
+            - 2D: Non-Energy Products from Fuels and Solvent Use
+            - 2E: Electronics Industry (no data available as the\
+                    category is only used for fluorinated gases which are only\
+                    resolved at the level of category 2)
+            - 2F: Product uses as Substitutes for Ozone Depleting\
+                    Substances (no data available as the category is only used\
+                    for fluorinated gases which are only resolved at the level\
+                    of category 2)
+            - 2G: Other Product Manufacture and Use
+            - 2H: Other
+        - 3: Agriculture, Forestry, and Other Land Use*
+            - 3A: Livestock
+            - 3B: Agriculture excluding Livestock*
+            - 3C: Land Use, Land Use Change, and Forestry (LULUCF)*
+        - 4: Waste
+        - 5: Other
 
-#### Entities
-(the gases that dominantly contribute to global warming)
-- (CO2) Carbon Dioxide
-- (CH4) Methane
-- (N2O) Nitrous Oxide
+    *these categories are aggregates implemented in PRIMAP-hist that differ
+    slightly from the official IPCC 20006 Guidelines.
+    """)
+    list2.markdown(
+        """
+    #### Regions
+    - All UNFCCC member states, as well as most non-UNFCCC territories\
+    [^ISO 3166-1 alpha-3]
 
-#### Reporting Scenarios
-- HISTCR: Prioritise Country-Reported Data
-- HISTTP: Prioritise Third-Party Data
-""")
+    - Additional groupings, including:
+        - Aggregated emissions for all countries
+        - Annex I Parties to the Convention\
+            ([list](https://unfccc.int/parties-observers))
+        - Non-Annex I Parties to the Convention\
+            ([list](https://unfccc.int/parties-observers))
+        - Alliance of Small Island States\
+            ([list](https://www.aosis.org/about/member-states/))
+        - BASIC countries (Brazil, South Africa, India, and China)
+        - European Union post Brexit\
+            ([list](https://europa.eu/european-union/about-eu/countries_en))
+        - Least Developed Countries
+        - Umbrella Group\
+            ([list](https://unfccc.int/process-and-meetings/parties-non-party-stakeholders/parties/party-groupings))
+
+    #### Entities
+    (the gases that dominantly contribute to global warming)
+    - (CO2) Carbon Dioxide
+    - (CH4) Methane
+    - (N2O) Nitrous Oxide
+
+    #### Reporting Scenarios
+    - HISTCR: Prioritise Country-Reported Data
+    - HISTTP: Prioritise Third-Party Data
+    """)
 
 # st.markdown(
 #     """
@@ -1369,6 +1361,27 @@ list2.markdown(
 # contributions in the majority of cases.
 
 # *A note on the non-inclusion of natural forcing:*
+
+with st.expander(
+    'What is the difference between absolute and relative temperature change'):
+    st.markdown("""
+    **Absolute Temperature Change** is defined here as warming consequent of
+    emissions relative to the preindustrial baseline. The chosen model
+    calculates temperatures from emissions for the entire historical period,
+    and then subtracts the average temperature of the chosen baseline period
+    (typically 1850-1900 is chosen as a reasonable proxy for pre-industrial
+    conditions).
+
+    **Relative Temperature Change** is defined here as warming consequent of
+    emissions since a chosen baseline, compared to what would have happened
+    if those emissions had ceased in the specified baseline year. The chosen
+    model first calculates Absolute Temperature Change for a given period, and
+    then subtracts the Absolute Temperature Change timeseries for a
+    counterfactual emissions timeseries where emissions cease in the selected
+    baseline year. Temperature change *before* the baseline year are given as
+    Absolute Temperature Change relative to temperature in the baseline year.
+    """)
+
 st.markdown(
     """
 ---
