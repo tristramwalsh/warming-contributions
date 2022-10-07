@@ -1203,7 +1203,7 @@ The sankey diagram presents a multi-level breakdown of contributions to
 plots on this page; data used in the sankey plot corresponds exactly to the
 data in the plots above.
 
-Warming contributions (flows) are red; cooling contributions (fows) are blue.
+Warming contributions (flows) are red; cooling contributions (flows) are blue.
 As with the bars above, width of the flows is proportional to the absolute
 value of temperature change - a wide red bar is a large warming impact, and a
 wide blue bar is a large cooling impact. The "true" size of any given node is
