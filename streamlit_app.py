@@ -1107,6 +1107,13 @@ if len(exceptions) >= 1:
     for exception in exceptions:
         exceptions_expander.write(f'- {exception}')
 
+# The below seems to fix the problem of the exceptions box being cut off at the
+# bottom of the sidebar.
+st.sidebar.write("""
+
+
+""")
+
 flow_colors = ['rgba(246, 51, 102, 0.3)' if t > 0
                else 'rgba(58, 213, 203, 0.3)'
                # else '#284960'
