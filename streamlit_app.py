@@ -426,7 +426,7 @@ def calc(df, scenarios, countries, categories, entities,
                         #                    for x in df_timeseries.index])
                         filter = np.array(
                             [1 if int(x) < int(baseline) else 0
-                            for x in (np.arange(len(arr_timeseries)) + 1750)])
+                             for x in (np.arange(len(arr_timeseries)) + 1750)])
                         arr_timeseries2 = arr_timeseries * filter
 
                         # temp_c stands for temperature in counterfactual world
@@ -633,17 +633,17 @@ temp_calc_method = side_expand.selectbox(
      'Relative Temperature Change (to Emissions Stopping in Baseline Year)'],
     0)
 
-if 'Absolute Temperature Change' in temp_calc_method:
-    baseline = side_expand.selectbox(
-        "Choose period for temperature baseline",
-        ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
-if 'Relative Temperature Change' in temp_calc_method:
-    baseline = str(side_expand.slider(
-        "Choose baseline year when emissions cease",
-        min_value=yr0,
-        max_value=yr1,
-        value=1750
-        ))
+# if 'Absolute Temperature Change' in temp_calc_method:
+#     baseline = side_expand.selectbox(
+#         "Choose period for temperature baseline",
+#         ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
+# if 'Relative Temperature Change' in temp_calc_method:
+#     baseline = str(side_expand.slider(
+#         "Choose baseline year when emissions cease",
+#         min_value=yr0,
+#         max_value=yr1,
+#         value=1750
+#         ))
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
@@ -676,6 +676,18 @@ else:
 
 
 # st.sidebar.write('---')
+
+if 'Absolute Temperature Change' in temp_calc_method:
+    baseline = st.sidebar.selectbox(
+        "Choose period for temperature baseline",
+        ['1850-1900', '1750-1800', '1860-1880', '1750'], 0)
+if 'Relative Temperature Change' in temp_calc_method:
+    baseline = str(st.sidebar.slider(
+        "Choose baseline year for relative temperature change",
+        min_value=yr0,
+        max_value=yr1,
+        value=1750
+        ))
 
 date_range = st.sidebar.slider(
     "Choose Date Range",
@@ -798,16 +810,18 @@ dis_aggregation = c2.selectbox(
 #     f"Calculate warming relative to selected start year {date_range[0]}?",
 #     value=False)
 
-c2.caption("""
-The timeseries depict annual emissions and the global temperature change
-consequent of those emissions.
 
-The first horizontal bar shows contributions over the *entire selected* time
-period, presenting dominant contributions to *historical* temperature change.
+c2.caption(f"""
+The timeseries depict depict annual emissions and the {temp_calc_method.lower()}
+consequent of those emissions, relative to the selected {baseline} baseline.
 
-The second horizontal bar shows contributions over the *final decade* of the
-selected time period, presenting the dominant contributions to *recent or
-current* temperature change.
+The top horizontal bar shows contributions over the *entire selected time
+period*, therefore presenting dominant contributions to *historical*
+temperature change.
+
+The bottom horizontal bar shows contributions over the *final decade* of the
+selected time period, presenting the dominant contributions to *recent*
+temperature change.
 
 Note, the size of a contribution's bar is proportional to absolute value;
 large warming and large cooling will therefore have similar sized bars.
