@@ -506,7 +506,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     # ending up with data duplications, if each subsequent data selection adds
     # on top of the existing StringIO in memory virtual csv)
     output_T = io.StringIO()
-    output_GWP = io.StringIO()
+    output_E = io.StringIO()
 
     return df_T, df_E
 
