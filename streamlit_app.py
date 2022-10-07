@@ -316,8 +316,8 @@ def load_data(file):
 
 @st.cache(show_spinner=False, suppress_st_warning=True)
 def calc(df, scenarios, countries, categories, entities, baseline,
-         future_toggle, future_co2_zero_year,
-         future_ch4_rate, future_n2o_rate):
+         emissions_units, future_toggle,
+         future_co2_zero_year, future_ch4_rate, future_n2o_rate):
     """Calculate warming impact, and GWP emissions, for given selection."""
     
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
@@ -403,10 +403,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                     
                     # Calculate the warming impact from the individual_series
 
-                    # ti = dt.datetime.now()
                     temp = ETmod(ny, a_params(entity)) @ arr_timeseries
-                    # tj = dt.datetime.now()
-                    # times_calc.append(tj-ti)
 
                     if 'Absolute Temperature Change' in temp_calc_method:
                         # The temperature profile above is the temperature
@@ -471,13 +468,21 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                     for i in range(len(temp))})
                     csv_writer_T.writerow(new_row)
 
-                    # SECOND compute GWP for GWP virtual csv
-                    GWP = arr_timeseries * gwp[entity]
+                    # SECOND compute emissions for emissions virtual csv
+                    if emissions_units == 'GWP100':
+                        GWP = arr_timeseries * gwp[entity]
+                        unit = 'GWP GtC CO2-e yr-1'
+                    elif emissions_units == 'CO2-fe':
+                        GWP = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide'))) @ EFmod(ny, a_params(entity)) @ arr_timeseries
+                        unit = 'GtCO2-fe yr-1'
+                    elif emissions_units == 'Absolute Mass':
+                        GWP = arr_timeseries
+                        unit = 'Gt yr-1'
                     new_row = {'scenario': scenarios,
                                'country': country,
                                'category': category,
                                'entity': entity,
-                               'unit': 'GWP GtC CO2-e yr-1'}
+                               'unit': unit}
                     new_row.update({str(PR_year[i]): GWP[i]
                                     for i in range(len(GWP))})
                     # Write this dictionary to the in-memory csv file.
@@ -638,6 +643,11 @@ temp_calc_method = side_expand.selectbox(
      'Relative Temperature Change (to Emissions Stopping in Baseline Year)'],
     0)
 
+emissions_units = side_expand.selectbox(
+    "Choose units to display emissions in",
+    ['Absolute Mass', 'GWP100', 'CO2-fe'], 1
+)
+
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
                                        value=False)
@@ -776,7 +786,8 @@ if len(double_counter) > 0:
 ####
 if d_set == 'IPCC AR5 Linear Impulse Response Model':
     df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
-                        baseline, future_toggle, future_co2_zero_year,
+                        baseline, emissions_units,
+                        future_toggle, future_co2_zero_year,
                         future_ch4_rate, future_n2o_rate)
 
 # CHECK DATA AVAILABLE
@@ -822,12 +833,12 @@ large warming and large cooling will therefore have similar sized bars.
 
 # CREATE EMISSIONS PLOT
 include_sum = True
-grouped_data_GWP = prepare_data(df_GWP,
+grouped_data_E = prepare_data(df_GWP,
                                 scenarios, countries, categories, entities,
                                 dis_aggregation, date_range, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
-alt_data = (grouped_data_GWP.T
+alt_data = (grouped_data_E.T
                             .reset_index()
                             .melt(id_vars=["index"])
                             .rename(columns={"index": "year", 'value': 'GWP'})
@@ -838,18 +849,24 @@ alt_data = (grouped_data_GWP.T
 # lines are present
 # Note, sorting this here, means it matches the order returned by the
 # (sorted) output_T form the selection widgets; som colours for plots match.
-c_domain = sorted(list(grouped_data_GWP.index))
+c_domain = sorted(list(grouped_data_E.index))
 # if include_sum and len(c_domain) > 1:
 if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
+if emissions_units == 'Absolute Mass':
+    metric_units = ''
+if emissions_units == 'GWP100':
+    metric_units = f'CO\u2082-e'
+if emissions_units == 'CO2-fe':
+    metric_units = f'CO\u2082-fe'
 chart_1a = (
     alt.Chart(alt_data)
        .mark_line(opacity=0.9)
        .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
                y=alt.Y("GWP:Q",
-                       title='annual emissions (Gt CO2-e per year)',
+                       title=f'annual emissions (Gt {metric_units} per year)',
                        # stack=None
                        ),
                color=alt.Color(dis_aggregation,
@@ -890,7 +907,7 @@ chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
 
 
 # c1a.subheader(f'emissions using GWP_100(Gt CO2-e yr-1)')
-c1a.subheader('annual emissions (GWP100)')
+c1a.subheader(F'annual emissions ({emissions_units})')
 chart_1a = (chart_1a
             .configure_legend(orient='top-left')
             .configure_axis(grid=False)
@@ -902,18 +919,18 @@ c1a.altair_chart(chart_1a2, use_container_width=True)
 c1a.altair_chart(chart_1a3, use_container_width=True)
 
 
-if 'SUM' in grouped_data_GWP.index:
-    value = grouped_data_GWP.loc['SUM'].sum()
-elif not grouped_data_GWP.empty:  # for elegent error handling
-    value = grouped_data_GWP.sum(axis=1).values[0]
+if 'SUM' in grouped_data_E.index:
+    value = grouped_data_E.loc['SUM'].sum()
+elif not grouped_data_E.empty:  # for elegent error handling
+    value = grouped_data_E.sum(axis=1).values[0]
 else:  # also for elegent error handling
     value = 0
 
 value = adjusted_scientific_notation(value * 1.e9, True)
 c1a.metric(('cumulative emissions between ' +
-           f'{date_range[0]}-{date_range[1]} (GWP100)'),
+           f'{date_range[0]}-{date_range[1]} ({emissions_units})'),
            # f'{value:.2E} Mt CO2-e',)
-           f'{value}t CO\u2082-e')
+           f'{value}t {metric_units}')
 
 
 # CREATE WARMING PLOT
