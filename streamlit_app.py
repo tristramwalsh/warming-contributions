@@ -314,7 +314,7 @@ def load_data(file):
     return df
 
 
-# @st.cache(show_spinner=False, suppress_st_warning=True)
+@st.cache(show_spinner=False, suppress_st_warning=True)
 def calc(df, scenarios, countries, categories, entities, baseline,
          emissions_units, future_toggle,
          future_co2_zero_year, future_ch4_rate, future_n2o_rate):
