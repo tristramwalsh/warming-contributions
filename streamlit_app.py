@@ -500,7 +500,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     output_T.seek(0)  # we need to get back to the start of the StringIO
     df_T = pd.read_csv(output_T)
     output_E.seek(0)  # we need to get back to the start of the StringIO
-    df_GWP = pd.read_csv(output_E)
+    df_E = pd.read_csv(output_E)
 
     # Just being paranoid about data leaking between user interactsions (ie
     # ending up with data duplications, if each subsequent data selection adds
@@ -508,7 +508,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     output_T = io.StringIO()
     output_GWP = io.StringIO()
 
-    return df_T, df_GWP
+    return df_T, df_E
 
 
 @st.cache(show_spinner=False)
@@ -787,13 +787,13 @@ if len(double_counter) > 0:
 # CALCULATE TEMPERATURES
 ####
 if d_set == 'IPCC AR5 Linear Impulse Response Model':
-    df_T, df_GWP = calc(df, scenarios, countries, categories, entities,
-                        baseline, emissions_units,
-                        future_toggle, future_co2_zero_year,
-                        future_ch4_rate, future_n2o_rate)
+    df_T, df_E = calc(df, scenarios, countries, categories, entities,
+                      baseline, emissions_units,
+                      future_toggle, future_co2_zero_year,
+                      future_ch4_rate, future_n2o_rate)
 
 # CHECK DATA AVAILABLE
-if prepare_data(df_GWP, scenarios, countries, categories, entities, 'country',
+if prepare_data(df_E, scenarios, countries, categories, entities, 'country',
                 date_range, False).empty:
     st.warning('No emissions data available for this selection')
 
@@ -835,7 +835,7 @@ large warming and large cooling will therefore have similar sized bars.
 
 # CREATE EMISSIONS PLOT
 include_sum = True
-grouped_data_E = prepare_data(df_GWP,
+grouped_data_E = prepare_data(df_E,
                                 scenarios, countries, categories, entities,
                                 dis_aggregation, date_range, include_sum)
 
@@ -1293,7 +1293,7 @@ if you select both a group and any of its subgroups:** for example, selecting
 """)
 
 with st.expander(
-    'Which contributors to temperature change are included'):
+    'Which contributors to temperature change are included?'):
 
 # expand_emissions.markdown("""
 # ### Which contributors to temperature change are included
@@ -1393,7 +1393,7 @@ with st.expander(
 # *A note on the non-inclusion of natural forcing:*
 
 with st.expander(
-    'What is the difference between absolute and relative temperature change'):
+    'What is the difference between absolute and relative temperature change?'):
     st.markdown("""
     **Absolute Temperature Change** is defined here as warming consequent of
     emissions relative to the preindustrial baseline. The chosen model
@@ -1410,6 +1410,18 @@ with st.expander(
     counterfactual emissions timeseries where emissions cease in the selected
     baseline year. Temperature change *before* the baseline year are given as
     Absolute Temperature Change relative to temperature in the baseline year.
+    """)
+
+with st.expander(
+    'What emissions metrics are available for presenting emissions data?'):
+    st.markdown("""
+    **Absolute Mass** is actual mass of each greenhouse gas emitted each year.
+
+    **GWP100** is Global Warming Potential at a time horizon of 100 years.
+
+    **CO2-fe** is CO2-forcing-equivalent emissions, ie the CO2 emissions
+    timeseries that would result in the same forcing as the specified emissions
+    timeseries of any greenhouse gas.
     """)
 
 st.markdown(
