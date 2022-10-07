@@ -200,9 +200,9 @@ def PR_emissions_units(df):
     entity_unit = {}
     for A, B in zip(entities, units):
         entity_unit[A] = B
-    emissions_units = pd.DataFrame(data=entity_unit, index=[0])
+    PR_emissions_units = pd.DataFrame(data=entity_unit, index=[0])
 
-    return emissions_units.T
+    return PR_emissions_units.T
 
 
 def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
@@ -314,7 +314,7 @@ def load_data(file):
     return df
 
 
-@st.cache(show_spinner=False, suppress_st_warning=True)
+# @st.cache(show_spinner=False, suppress_st_warning=True)
 def calc(df, scenarios, countries, categories, entities, baseline,
          emissions_units, future_toggle,
          future_co2_zero_year, future_ch4_rate, future_n2o_rate):
@@ -329,20 +329,22 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                     (df['country'].isin(countries)) &
                     (df['category'].isin(categories)) &
                     (df['entity'].isin(entities))]
-
+    
     # Prepare the virtual csv files to output calculated things to
     column_names = ['scenario', 'country', 'category', 'entity', 'unit']
     ny = future_co2_zero_year - yr0 + 1 if future_toggle else yr1 - yr0 + 1
     PR_year = np.arange(ny) + yr0
     column_names.extend([str(i) for i in PR_year])
+    
     # Create in memory virtual csv to write temperatures to
     output_T = io.StringIO()
     csv_writer_T = csv.DictWriter(output_T, fieldnames=column_names)
     csv_writer_T.writeheader()
-    # Create in memory virtual csv to write GWP to
-    output_GWP = io.StringIO()
-    csv_writer_GWP = csv.DictWriter(output_GWP, fieldnames=column_names)
-    csv_writer_GWP.writeheader()
+
+    # Create in memory virtual csv to write emissions to
+    output_E = io.StringIO()
+    csv_writer_E = csv.DictWriter(output_E, fieldnames=column_names)
+    csv_writer_E.writeheader()
 
     t1 = dt.datetime.now()
     # times_calc, times_csv = [], []
@@ -402,9 +404,9 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                 )
                     
                     # Calculate the warming impact from the individual_series
-
                     temp = ETmod(ny, a_params(entity)) @ arr_timeseries
-
+                    
+                    # PICK BETWEEN THE TWO METHODS OF BASELINING TEMPERATURES
                     if 'Absolute Temperature Change' in temp_calc_method:
                         # The temperature profile above is the temperature
                         # required.
@@ -412,26 +414,25 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                         # Apply the baseline subtraction
                         if '-' in baseline:
                             filter = np.array(
-                                [1 if (int(baseline.split('-')[0]) < int(y) <
+                                [0 if (int(baseline.split('-')[0]) <= int(y) <
                                        int(baseline.split('-')[1]))
-                                 else 0
+                                 else 1
                                  for y
-                                 in (np.arange(len(arr_timeseries)) + yr0)])
-                            pre_ind_temp = (temp * filter).mean()
-                            
+                                 in (np.arange(len(temp)) + 1750)])
+                            pre_ind_temp = np.ma.masked_array(
+                                temp, mask=filter).mean()
+ 
                         elif '-' not in baseline:
                             filter = np.array(
-                                [1 if int(y) == int(baseline)
-                                 else 0
+                                [0 if int(y) == int(baseline)
+                                 else 1
                                  for y
-                                 in (np.arange(len(arr_timeseries)) + yr0)])
-                            pre_ind_temp = (temp * filter).mean()
-                            
+                                 in (np.arange(len(arr_timeseries)) + 1750)])
+                            pre_ind_temp = np.ma.masked_array(
+                                temp, mask=filter).mean()
+
                         temp = temp - pre_ind_temp
 
-                    ###########################################################
-                    #### PICK BETWEEN THE TWO METHODS OF CALCULATING TEMPS
-                    ###########################################################
                     elif 'Relative Temperature Change' in temp_calc_method:
                         # Here we calculate the reative temperature response,
                         # defined as the difference between the temperature
@@ -459,34 +460,35 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                 filter * (temp - temp[int(baseline) - yr0]))
 
                     # Create dictionary with the new temp data in
-                    new_row = {'scenario': scenarios,
-                               'country': country,
-                               'category': category,
-                               'entity': entity,
-                               'unit': 'K'}
-                    new_row.update({str(PR_year[i]): temp[i]
+                    new_row_T = {'scenario': scenarios,
+                                 'country': country,
+                                 'category': category,
+                                 'entity': entity,
+                                 'unit': 'K'}
+                    new_row_T.update({str(PR_year[i]): temp[i]
                                     for i in range(len(temp))})
-                    csv_writer_T.writerow(new_row)
-
+                    csv_writer_T.writerow(new_row_T)
+                    
+                    ####################################################
                     # SECOND compute emissions for emissions virtual csv
                     if emissions_units == 'GWP100':
-                        GWP = arr_timeseries * gwp[entity]
+                        EMIS = arr_timeseries * gwp[entity]
                         unit = 'GWP GtC CO2-e yr-1'
                     elif emissions_units == 'CO2-fe':
-                        GWP = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide'))) @ EFmod(ny, a_params(entity)) @ arr_timeseries
+                        EMIS = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide'))) @ EFmod(ny, a_params(entity)) @ arr_timeseries
                         unit = 'GtCO2-fe yr-1'
                     elif emissions_units == 'Absolute Mass':
-                        GWP = arr_timeseries
+                        EMIS = arr_timeseries
                         unit = 'Gt yr-1'
-                    new_row = {'scenario': scenarios,
-                               'country': country,
-                               'category': category,
-                               'entity': entity,
-                               'unit': unit}
-                    new_row.update({str(PR_year[i]): GWP[i]
-                                    for i in range(len(GWP))})
+                    new_row_E = {'scenario': scenarios,
+                                 'country': country,
+                                 'category': category,
+                                 'entity': entity,
+                                 'unit': unit}
+                    new_row_E.update({str(PR_year[i]): EMIS[i]
+                                      for i in range(len(EMIS))})
                     # Write this dictionary to the in-memory csv file.
-                    csv_writer_GWP.writerow(new_row)
+                    csv_writer_E.writerow(new_row_E)
                     # tk = dt.datetime.now()
                     # times_csv.append(tk-tj)
 
@@ -497,8 +499,8 @@ def calc(df, scenarios, countries, categories, entities, baseline,
 
     output_T.seek(0)  # we need to get back to the start of the StringIO
     df_T = pd.read_csv(output_T)
-    output_GWP.seek(0)  # we need to get back to the start of the StringIO
-    df_GWP = pd.read_csv(output_GWP)
+    output_E.seek(0)  # we need to get back to the start of the StringIO
+    df_GWP = pd.read_csv(output_E)
 
     # Just being paranoid about data leaking between user interactsions (ie
     # ending up with data duplications, if each subsequent data selection adds
@@ -682,7 +684,7 @@ else:
 
 if 'Absolute Temperature Change' in temp_calc_method:
     baseline = st.sidebar.selectbox(
-        "Choose period for temperature baseline",
+        "Choose period for pre-industrial temperature baseline",
         ['1850-1900', '1750-1800', '1750'], 0)
 if 'Relative Temperature Change' in temp_calc_method:
     baseline = str(st.sidebar.slider(
