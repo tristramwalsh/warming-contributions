@@ -217,11 +217,19 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
     nearest_lower_third = 3*(order_of_magnitude//3)
     adjusted_mantissa = val*10**(-nearest_lower_third)
     adjusted_mantissa_string = mantissa_template.format(adjusted_mantissa)
-    adjusted_exponent_string = ("+-"[nearest_lower_third < 0] +
-                                exponent_template.format(
-                                    abs(nearest_lower_third))
+    # if nearest_lower_third < 0:
+    #     sign = '-'
+    # elif nearest_lower_third >=0:
+    #     sign = '+'
+    sign = '-' if nearest_lower_third < 0 else '+'
+    # adjusted_exponent_string = (
+    #                             "+-"[nearest_lower_third < 0] +
+    #                             exponent_template.format(
+    #                                 abs(nearest_lower_third))
+    #                             )
+    adjusted_exponent_string = (sign + exponent_template.format(
+        abs(nearest_lower_third))
                                 )
-
     if letter:
         names = {'-12.0': ' p', '-9.0': ' n', '-6.0': ' \u03BC', '-3.0': ' m',
                  '+00': ' ', '+0.0': ' ', '+3.0': ' k', '+6.0': ' M',
