@@ -656,16 +656,23 @@ temp_calc_method = side_expand.selectbox(
     "Choose temperature calculation method",
     ['Absolute Temperature Change (from Preindustrial Baseline)',
      'Relative Temperature Change (to Emissions Stopping in Baseline Year)'],
-    0)
+    0,
+    help=('"Absolute": warming relative to preindustrial baseline period. ' +
+          '"Relative": warming relative to emissions halting in baseline ' +
+          'year. For more please scoll down for the main text.')
+)
 
 emissions_units = side_expand.selectbox(
     "Choose units to display emissions in",
-    ['Absolute Mass', 'GWP100', 'CO2-fe'], 1
+    ['Absolute Mass', 'GWP100', 'CO2-fe'], 1,
+    help='For details please scoll down for the main text.'
 )
 
 future_expand = st.sidebar.expander('Future Emissions')
 future_toggle = future_expand.checkbox('Explore Future Projections?',
-                                       value=False)
+                                       value=False,
+                                       help='Explore a range of net zero\
+                                             emission-reduction pathways.')
 if future_toggle:
     # future_co2_zero_year = future_expand.slider(
     #     'Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
@@ -711,7 +718,9 @@ date_range = st.sidebar.slider(
     "Choose Date Range",
     min_value=yr0,
     max_value=future_co2_zero_year if future_toggle else yr1,
-    value=[1850, future_co2_zero_year] if future_toggle else [1850, yr1]
+    value=[1850, future_co2_zero_year] if future_toggle else [1850, yr1],
+    help=('Does not affect calculation or results; this only selects the ' +
+          'period to display in the timeseries plots.')
     )
 
 countries = sorted(st.sidebar.multiselect(
@@ -780,7 +789,9 @@ entities = sorted(st.sidebar.multiselect(
     ['Methane', 'Carbon Dioxide', 'Nitrous Oxide']\
         if d_set == 'IPCC AR5 Linear Impulse Response Model'\
         else sorted(list(set(df['entity']))),
-    ['Methane', 'Carbon Dioxide', 'Nitrous Oxide']
+    ['Methane', 'Carbon Dioxide', 'Nitrous Oxide'],
+    help='For a guide to available greenhouse gases,\
+          please scroll down for the main text.'
 ))
 
 calc_text = st.sidebar.empty()
