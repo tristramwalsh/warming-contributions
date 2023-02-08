@@ -929,9 +929,9 @@ chart_1a = (chart_1a
             .configure_view(strokeOpacity=0.0))
 
 
-c1a.altair_chart(chart_1a, use_container_width=True)
-c1a.altair_chart(chart_1a2, use_container_width=True)
-c1a.altair_chart(chart_1a3, use_container_width=True)
+c1a.altair_chart(chart_1a, use_container_width=True, theme=None)
+c1a.altair_chart(chart_1a2, use_container_width=True, theme=None)
+c1a.altair_chart(chart_1a3, use_container_width=True, theme=None)
 
 
 if 'SUM' in grouped_data_E.index:
@@ -1039,9 +1039,9 @@ chart_1b = (chart_1b
             .configure_view(strokeOpacity=0.0)
             )
 
-c1b.altair_chart(chart_1b, use_container_width=True)
-c1b.altair_chart(chart_1b2, use_container_width=True)
-c1b.altair_chart(chart_1b3, use_container_width=True)
+c1b.altair_chart(chart_1b, use_container_width=True, theme=None)
+c1b.altair_chart(chart_1b2, use_container_width=True, theme=None)
+c1b.altair_chart(chart_1b3, use_container_width=True, theme=None)
 
 
 if 'SUM' in grouped_data.index:
