@@ -718,9 +718,7 @@ date_range = st.sidebar.slider(
     "Choose Date Range",
     min_value=yr0,
     max_value=future_co2_zero_year if future_toggle else yr1,
-    value=[1850, future_co2_zero_year] if future_toggle else [1850, yr1],
-    help=('Does not affect calculation or results; this only selects the ' +
-          'period to display in the timeseries plots.')
+    value=[1850, future_co2_zero_year] if future_toggle else [1850, yr1]
     )
 
 countries = sorted(st.sidebar.multiselect(
