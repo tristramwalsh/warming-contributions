@@ -626,8 +626,11 @@ d_set = side_expand.selectbox('Choose warming model',
 #           'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_20-Sep_2021.csv')
 
 # The no_rounding dataset variant includes LULUCF:
-PR_url = ('https://zenodo.org/record/5494497/files/' +
-          'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_no_rounding_20-Sep_2021.csv')
+# PR_url = ('https://zenodo.org/record/5494497/files/' +
+#           'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_no_rounding_20-Sep_2021.csv')
+PR_url = ('https://zenodo.org/record/7179775/files/' +
+          'Guetschow-et-al-2022-PRIMAP-hist_v2.4_no_rounding_11-Oct-2022.csv')
+
 
 df = load_data(PR_url)
 PRIMAP_years = [int(x) for x in df.columns if x.isdigit()]
@@ -1286,7 +1289,7 @@ temperature changes.
 st.markdown("""
 ## Coverage of emissions and temperature impact
 Emissions of individual greenhouse gases are as reported in the PRIMAP
-database. [^Gütschow et al 2021]
+database. [^Gütschow et al 2022]
 
 Temperature change alculations are all based on the linear response model
 documented in the IPCC's 5th Assessment Report.
@@ -1477,9 +1480,10 @@ logo5.image("https://drive.google.com/uc?export=view&id=1OGVCRwfaZTYPx3-LkcVx6qv
 st.caption("""
 ---
 
-[^Gütschow et al 2021]: Gütschow, J.; Günther, A.; Pflüger, M. (2021):
-The PRIMAP-hist national historical emissions time series (1750-2019).
-v2.3.1. zenodo. https://doi.org/10.5281/zenodo.5494497
+[^Gütschow et al 2022]: Gütschow, J.; Pflüger, M. (2022): The PRIMAP-hist
+national historical emissions time series v2.4 (1750-2021). zenodo.
+https://doi.org/10.5281/zenodo.7179775
+
 
 [^IPCC AR5 WG1 (Myhre et al 2013)]: Myhre, G., D. Shindell, F.-M. Bréon,
 W. Collins, J. Fuglestvedt, J. Huang, D. Koch, J.-F. Lamarque, D. Lee,
