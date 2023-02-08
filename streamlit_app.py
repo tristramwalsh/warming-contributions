@@ -692,7 +692,7 @@ if future_toggle:
         'Change in N2O emissions by 2030 (%)', -90, 0, -15,
         step=1, format='%f') / 100
     future_ch4_rate = (1 + interim_ch4_rate)**(1/(2030-yr1)) - 1
-    future_n2o_rate = (1 + interim_ch4_rate)**(1/(2030-yr1)) - 1
+    future_n2o_rate = (1 + interim_n2o_rate)**(1/(2030-yr1)) - 1
 
 else:
     future_co2_zero_year = None
