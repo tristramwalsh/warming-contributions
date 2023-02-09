@@ -822,7 +822,7 @@ dis_aggregation = c2.selectbox(
 )
 
 
-# plot_style = c2.selectbox('Choose plot style', ['line', 'area'])
+plot_style = c2.selectbox('Choose plot style', ['line', 'area'])
 
 c2.caption(f"""
 The timeseries depict depict annual emissions and the {temp_calc_method.lower()}
@@ -841,8 +841,7 @@ large warming and large cooling will therefore have similar sized bars.
 """)
 
 # CREATE EMISSIONS PLOT
-# include_sum = True if plot_style == 'line' else False
-include_sum = True
+include_sum = True if plot_style == 'line' else False
 grouped_data_E = prepare_data(df_E,
                                 scenarios, countries, categories, entities,
                                 dis_aggregation, date_range, include_sum)
@@ -870,9 +869,14 @@ if emissions_units == 'GWP100':
     metric_units = f'CO\u2082-e'
 if emissions_units == 'CO2-fe':
     metric_units = f'CO\u2082-fe'
+
+if plot_style == 'line':
+    chart_base = alt.Chart(alt_data).mark_line(opacity=0.9)
+if plot_style == 'area':
+    chart_base = alt.Chart(alt_data).mark_area(opacity=0.9)
+
 chart_1a = (
-    alt.Chart(alt_data)
-       .mark_line(opacity=0.9)
+    chart_base
        .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
                y=alt.Y("GWP:Q",
                        title=f'annual emissions (Gt {metric_units} per year)',
@@ -931,7 +935,8 @@ c1a.altair_chart(chart_1a3, use_container_width=True, theme=None)
 if 'SUM' in grouped_data_E.index:
     value = grouped_data_E.loc['SUM'].sum()
 elif not grouped_data_E.empty:  # for elegent error handling
-    value = grouped_data_E.sum(axis=1).values[0]
+    # value = grouped_data_E.sum(axis=1).values[0]
+    value = grouped_data_E.sum(axis=1).sum()
 else:  # also for elegent error handling
     value = 0
 
@@ -943,7 +948,7 @@ c1a.metric(('cumulative emissions between ' +
 
 
 # CREATE WARMING PLOT
-include_sum = True
+# include_sum = True
 grouped_data = prepare_data(df_T, scenarios, countries, categories, entities,
                             dis_aggregation, date_range, include_sum)
 
@@ -964,9 +969,14 @@ if 'SUM' in c_domain:
     c_domain.append(c_domain.pop(c_domain.index('SUM')))
 c_range = colour_range(c_domain, include_sum, dis_aggregation)
 
-chart_1b = (
-    alt.Chart(alt_data)
-    .mark_line(opacity=0.9)
+if plot_style == 'line':
+    chart_base = alt.Chart(alt_data).mark_line(opacity=0.9)
+if plot_style == 'area':
+    chart_base = alt.Chart(alt_data).mark_area(opacity=0.9)
+
+
+
+chart_1b = (chart_base
     .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
             y=alt.Y("warming:Q",
                     title='global temperature change (°C)',
@@ -1041,7 +1051,7 @@ c1b.altair_chart(chart_1b3, use_container_width=True, theme=None)
 if 'SUM' in grouped_data.index:
     value = grouped_data.loc['SUM', str(date_range[1])]
 elif not grouped_data.empty:  # for elegent error handling
-    value = grouped_data[str(date_range[1])].values[0]
+    value = grouped_data[str(date_range[1])].sum(axis=0).sum()
 else:  # also for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value, True)
