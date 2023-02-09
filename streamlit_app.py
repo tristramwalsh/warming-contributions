@@ -326,7 +326,7 @@ def load_data(file):
 def calc(df, scenarios, countries, categories, entities, baseline,
          emissions_units, future_toggle,
          future_co2_zero_year, future_ch4_rate, future_n2o_rate):
-    """Calculate warming impact, and GWP emissions, for given selection."""
+    """Calculate warming impact, and emissions metrics, for given selection."""
     
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'Carbon Dioxide': 1., 'Methane': 28., 'Nitrous Oxide': 265.}
@@ -344,6 +344,12 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     PR_year = np.arange(ny) + yr0
     column_names.extend([str(i) for i in PR_year])
     
+    # For the following simple climate model calculations, it is far more
+    # performant to write calculation results to a virtual in-memory CSV and
+    # read that CSV into pandas after all calculations are complete, compared
+    # with writing over an existing pandas dataframe, or creating a new one "on
+    #  the fly".
+  
     # Create in memory virtual csv to write temperatures to
     output_T = io.StringIO()
     csv_writer_T = csv.DictWriter(output_T, fieldnames=column_names)
@@ -356,6 +362,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
 
     t1 = dt.datetime.now()
     
+    # Invert linear model to calculate forcing-equivalent emissions.
     fe_matrix = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide')))
     
     i = 1
@@ -412,10 +419,10 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                          (1 + future_n2o_rate)**i
                                          for i in fut_yrs-yr1])
                                 )
-                    
+
                     # Calculate the warming impact from the individual_series
                     temp = ETmod(ny, a_params(entity)) @ arr_timeseries
-                    
+
                     # PICK BETWEEN THE TWO METHODS OF BASELINING TEMPERATURES
                     if 'Absolute Temperature Change' in temp_calc_method:
                         # The temperature profile above is the temperature
@@ -431,7 +438,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                  in (np.arange(len(temp)) + 1750)])
                             pre_ind_temp = np.ma.masked_array(
                                 temp, mask=filter).mean()
- 
+
                         elif '-' not in baseline:
                             filter = np.array(
                                 [0 if int(y) == int(baseline)
@@ -499,22 +506,19 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                       for i in range(len(EMIS))})
                     # Write this dictionary to the in-memory csv file.
                     csv_writer_E.writerow(new_row_E)
-                    # tk = dt.datetime.now()
-                    # times_csv.append(tk-tj)
 
     t2 = dt.datetime.now()
     calc_text.text(f'new calculation took: {(t2-t1)}')
-    # st.sidebar.text(f'average calc time: {np.mean(times_calc)}')
-    # st.sidebar.text(f'average csv time: {np.mean(times_csv)}')
 
     output_T.seek(0)  # we need to get back to the start of the StringIO
     df_T = pd.read_csv(output_T)
     output_E.seek(0)  # we need to get back to the start of the StringIO
     df_E = pd.read_csv(output_E)
 
-    # Just being paranoid about data leaking between user interactsions (ie
-    # ending up with data duplications, if each subsequent data selection adds
-    # on top of the existing StringIO in memory virtual csv)
+    # Just to reassure myself that data isn't leaking between app user
+    # interactions (and ending up with data duplications, if each subsequent
+    # data selection adds on top of the existing StringIO in memory virtual
+    # csv):
     output_T = io.StringIO()
     output_E = io.StringIO()
 
@@ -605,32 +609,20 @@ def colour_range(domain, include_total, variable):
 st.sidebar.markdown('# Select Data to Explore')
 
 side_expand = st.sidebar.expander('Customise Calculation')
-d_set = side_expand.selectbox('Choose warming model',
-                              ['IPCC AR5 Linear Impulse Response Model'], 0)
+climate_model = side_expand.selectbox(
+    'Choose warming model', ['IPCC AR5 Linear Impulse Response Model'], 0)
 
-# if d_set == 'Emissions':
-#     # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-#     df = load_data(
-#     'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
-# elif d_set == 'Warming Impact':
-#     df = load_data("./data/warming-contributions-data_PRIMAP-format.csv")
-# # elif d_set == 'Upload Own Data':
-# #     df = load_data(side_expand.file_uploader('upload emissions'))
-# elif d_set == 'IPCC AR5 Linear Impulse Response Model':
-#     # df = load_data("./data/PRIMAP-hist_v2.2_19-Jan-2021.csv")
-#     df = load_data(
-#         'https://zenodo.org/record/4479172/files/PRIMAP-hist_v2.2_19-Jan-2021.csv')
 # PR_url = ('https://zenodo.org/record/4479172/files/' +
 #           'PRIMAP-hist_v2.2_19-Jan-2021.csv')
 # PR_url = ('https://zenodo.org/record/5494497/files/' +
 #           'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_20-Sep_2021.csv')
+# The no_rounding dataset variant includes LULUCF, which we manually in/exclude
 
-# The no_rounding dataset variant includes LULUCF:
+# using the LULUCF selection in the sidebar:
 # PR_url = ('https://zenodo.org/record/5494497/files/' +
 #           'Guetschow-et-al-2021-PRIMAP-hist_v2.3.1_no_rounding_20-Sep_2021.csv')
 PR_url = ('https://zenodo.org/record/7179775/files/' +
           'Guetschow-et-al-2022-PRIMAP-hist_v2.4_no_rounding_11-Oct-2022.csv')
-
 
 df = load_data(PR_url)
 PRIMAP_years = [int(x) for x in df.columns if x.isdigit()]
@@ -709,16 +701,13 @@ if 'Absolute Temperature Change' in temp_calc_method:
 if 'Relative Temperature Change' in temp_calc_method:
     baseline = str(st.sidebar.slider(
         "Choose baseline year for relative temperature change",
-        min_value=yr0,
-        max_value=yr1,
-        value=1875
-        ))
+        min_value=yr0, max_value=yr1, value=1875))
 
 date_range = st.sidebar.slider(
     "Choose Date Range",
     min_value=yr0,
     max_value=future_co2_zero_year if future_toggle else yr1,
-    value=[1850, future_co2_zero_year] if future_toggle else [1850, yr1]
+    value=[1900, future_co2_zero_year] if future_toggle else [1900, yr1]
     )
 
 countries = sorted(st.sidebar.multiselect(
@@ -735,8 +724,8 @@ if LULUCF == 'Include LULUCF':
                                set(['0: Total excluding LULUCF'])
                                ))
     # Note that we remove the option to select the sub-level aggregation
-    # '3: Agriculture, sum of 3A and 3B' to reduce confusion.This aggregation
-    # is actually included directly in 2.3.1.
+    # '3: Agriculture, sum of 3A and 3B' to reduce confusion. This aggregation
+    # is actually included directly in PRIMAP-hist 2.3.1.
     category_default = ['1: Energy',
                         '2: Industrial Processes and Product Use (IPPU)',
                         '3: Agriculture, Forestry, and Other Land Use',
@@ -749,7 +738,7 @@ elif LULUCF == 'Do Not Include LULUCF':
                                ))
     # Note that we remove the option to select the sub-level aggregation
     # '3: Agriculture, Forestry, and Other Land Use' to reduce confusion. This
-    # aggregation is actually included directly in 2.3.1.
+    # aggregation is actually included directly in PRIMAP-hist 2.3.1.
     category_default = ['1: Energy',
                         '2: Industrial Processes and Product Use (IPPU)',
                         '3: Agriculture, sum of 3A and 3B',
@@ -762,9 +751,9 @@ categories = sorted(st.sidebar.multiselect(
     category_set, category_default,
     help='For a guide to available emissions categories/sectors,\
           please scroll down for the main text.'
-
 ))
 
+# Warn user about data selections that result in double counting.
 codes = [cat.split(':')[0] for cat in categories]
 double_counter = []
 if 'Total excluding LULUCF' in codes and len(codes) > 1:
@@ -785,7 +774,7 @@ entities = sorted(st.sidebar.multiselect(
     # sorted(list(set(df['entity']))),
     # sorted(list(set(df['entity']))),
     ['Methane', 'Carbon Dioxide', 'Nitrous Oxide']\
-        if d_set == 'IPCC AR5 Linear Impulse Response Model'\
+        if climate_model == 'IPCC AR5 Linear Impulse Response Model'\
         else sorted(list(set(df['entity']))),
     ['Methane', 'Carbon Dioxide', 'Nitrous Oxide'],
     help='For a guide to available greenhouse gases,\
@@ -805,10 +794,10 @@ if len(double_counter) > 0:
         double_count_expander.write(f'- {double}')
 
 ####
-# IF 'IPCC AR5 Linear Impulse Response Model' DATA SELECTED,
+# IF 'IPCC AR5 Linear Impulse Response Model' MODEL SELECTED,
 # CALCULATE TEMPERATURES
 ####
-if d_set == 'IPCC AR5 Linear Impulse Response Model':
+if climate_model == 'IPCC AR5 Linear Impulse Response Model':
     df_T, df_E = calc(df, scenarios, countries, categories, entities,
                       baseline, emissions_units,
                       future_toggle, future_co2_zero_year,
@@ -831,13 +820,9 @@ dis_aggregation = c2.selectbox(
     ['country', 'category', 'entity'],
     index=['country', 'category', 'entity'].index('category')
 )
-# aggregated = sorted(list(set(['country', 'category', 'entity']) -
-#                         set([dis_aggregation])))
 
-# offset = c2.checkbox(
-#     f"Calculate warming relative to selected start year {date_range[0]}?",
-#     value=False)
 
+# plot_style = c2.selectbox('Choose plot style', ['line', 'area'])
 
 c2.caption(f"""
 The timeseries depict depict annual emissions and the {temp_calc_method.lower()}
@@ -856,14 +841,14 @@ large warming and large cooling will therefore have similar sized bars.
 """)
 
 # CREATE EMISSIONS PLOT
+# include_sum = True if plot_style == 'line' else False
 include_sum = True
 grouped_data_E = prepare_data(df_E,
                                 scenarios, countries, categories, entities,
                                 dis_aggregation, date_range, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
-alt_data = (grouped_data_E.T
-                            .reset_index()
+alt_data = (grouped_data_E.T.reset_index()
                             .melt(id_vars=["index"])
                             .rename(columns={"index": "year", 'value': 'GWP'})
             )
