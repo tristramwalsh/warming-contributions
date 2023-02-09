@@ -44,13 +44,13 @@ st.markdown("""
 # https://discuss.streamlit.io/t/remove-made-with-streamlit-from-bottom-of-app/1370/2
 # also this:
 # https://discuss.streamlit.io/t/how-do-i-hide-remove-the-menu-in-production/362/7
-# hide_streamlit_style = """
-#             <style>
-#             #MainMenu {visibility: hidden;}
-#             footer {visibility: hidden;}
-#             </style>
-#             """
-# st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            </style>
+            """
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
 
 # Disable opacity fading every time a widget is changed.
