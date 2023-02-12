@@ -1,4 +1,4 @@
-"""Streamlit web app exploring pre-calculated (static) warming dataset."""
+"""Streamlit web app calculating and exploring contributions to warming."""
 import io
 import csv
 import datetime as dt
@@ -6,11 +6,12 @@ import datetime as dt
 # from numpy_lru_cache_decorator import np_cache
 
 # import numba
-import seaborn as sns
-import streamlit as st
-import pandas as pd
+
 import numpy as np
+import pandas as pd
+import streamlit as st
 import altair as alt
+import seaborn as sns
 import matplotlib
 # import matplotlib.pyplot as plt
 import plotly.graph_objects as go
@@ -934,10 +935,9 @@ c1a.altair_chart(chart_1a3, use_container_width=True, theme=None)
 
 if 'SUM' in grouped_data_E.index:
     value = grouped_data_E.loc['SUM'].sum()
-elif not grouped_data_E.empty:  # for elegent error handling
-    # value = grouped_data_E.sum(axis=1).values[0]
+elif not grouped_data_E.empty:
     value = grouped_data_E.sum(axis=1).sum()
-else:  # also for elegent error handling
+else:  # for elegent error handling
     value = 0
 
 value = adjusted_scientific_notation(value * 1.e9, True)
@@ -1050,9 +1050,9 @@ c1b.altair_chart(chart_1b3, use_container_width=True, theme=None)
 
 if 'SUM' in grouped_data.index:
     value = grouped_data.loc['SUM', str(date_range[1])]
-elif not grouped_data.empty:  # for elegent error handling
+elif not grouped_data.empty:
     value = grouped_data[str(date_range[1])].sum(axis=0).sum()
-else:  # also for elegent error handling
+else:  # for elegent error handling
     value = 0
 value = adjusted_scientific_notation(value, True)
 c1b.metric(f'net warming in {date_range[1]} relative to {baseline}',
@@ -1281,11 +1281,15 @@ conducted in a fully transparent and traceable manner; warming is calculated
 using the IPCC AR5 Linear Impulse Response Model, driven by emissions from the
 comprehensive PRIMAP-hist dataset.
 
-An upcoming update will provide global warming impact calculations for
-user-uploaded emissions pathways, thus widening use of transparent calculation
-tools to anyone who wishes to assess the impact of their actions to global
-temperature changes.
-
+Future updates will provide:
+- Inclusion of the (smaller) contributions from other greenhouse-gases.
+- Inclusion of per-capita and per-GDP scaling for emissions and warming.
+- Option to use FaIR climate model instead of IPCC AR5-IR model
+- Additional options for future emissions, eg. using data from common \
+scenarios, or national net zero targets.
+- Global warming impact calculations for user-uploaded emissions pathways, \
+thus widening use of transparent calculation tools to anyone who wishes to \
+assess the impact of their actions to global temperature changes.
 
 """)
 
