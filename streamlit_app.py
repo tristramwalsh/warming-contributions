@@ -545,7 +545,7 @@ def prepare_data(df, scenarios, countries, categories, entities,
               (df['entity'].isin(entities))]
 
     # Group data
-    grouped_data = data.groupby(dis_aggregation).sum()
+    grouped_data = data.groupby(dis_aggregation).sum(numeric_only=False)
 
     # Restrict the data to just that selected by the data_range slider
     grouped_data = grouped_data.loc[:, str(date_range[0]):str(date_range[1])]
