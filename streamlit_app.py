@@ -235,9 +235,7 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
 
 
-@st.cache_data(show_spinner=False,
-            #    suppress_st_warning=True
-               )
+@st.cache_data(show_spinner=False)
 def load_data(file):
     """Load the dataset, and rename codes with human-friendly terms."""
     # NOTE: function approach allows streamlit caching,
@@ -259,7 +257,6 @@ def load_data(file):
                      for x in iso_country}
     country_names['ANT'] = 'Netherlands Antilles'
     # NB 'ANT' is handled separately as this isn't included in pycountry.
-
 
     # Note, the space at the beginning of the long names below is used so that
     # these group-style regions appear first in the multiselect box. It doesn't
@@ -320,9 +317,7 @@ def load_data(file):
     return df
 
 
-@st.cache_data(show_spinner=False,
-            #    suppress_st_warning=True
-               )
+@st.cache_data(show_spinner=False)
 def calc(df, scenarios, countries, categories, entities, baseline,
          emissions_units, future_toggle,
          future_co2_zero_year, future_ch4_rate, future_n2o_rate):
@@ -459,7 +454,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                         # defined as the difference between the temperature
                         # of the "real world" and the temperature of a
                         # counterfactual world where emissions stop in baseline
-                        # year. For the period before the baseline, we 
+                        # year. For the period before the baseline, we
                         # filter = np.array([1 if int(x) < int(baseline) else 0
                         #                    for x in df_timeseries.index])
                         filter = np.array(
@@ -496,7 +491,9 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                         EMIS = arr_timeseries * gwp[entity]
                         unit = 'GWP GtC CO2-e yr-1'
                     elif emissions_units == 'CO2-fe':
-                        EMIS = fe_matrix @ EFmod(ny, a_params(entity)) @ arr_timeseries
+                        EMIS = (fe_matrix
+                                @ EFmod(ny, a_params(entity))
+                                @ arr_timeseries)
                         unit = 'GtCO2-fe yr-1'
                     elif emissions_units == 'Absolute Mass':
                         EMIS = arr_timeseries
@@ -679,7 +676,7 @@ if future_toggle:
     # future_n2o_rate = future_expand.slider(
     #     'Change in N2O emissions by 2030 (%)', -10., 0., -0.7,
     #     step=0.1, format='%f') / 100
-    
+
     future_co2_zero_year = future_expand.slider(
         'Year of achieving net zero CO2 emissions', 2025, 2100, 2050)
     interim_ch4_rate = future_expand.slider(
@@ -737,9 +734,10 @@ if LULUCF == 'Include LULUCF':
                         '4: Waste',
                         '5: Other']
 elif LULUCF == 'Do Not Include LULUCF':
-    category_set = sorted(list(set(df['category']) -
-                               set(['3: Agriculture, Forestry, and Other Land Use']) -
-                               set(['0: Total'])
+    category_set = sorted(list(
+        set(df['category']) -
+        set(['3: Agriculture, Forestry, and Other Land Use']) -
+        set(['0: Total'])
                                ))
     # Note that we remove the option to select the sub-level aggregation
     # '3: Agriculture, Forestry, and Other Land Use' to reduce confusion. This
@@ -776,8 +774,6 @@ for code in codes:
 
 entities = sorted(st.sidebar.multiselect(
     "Choose entities (gases)",
-    # sorted(list(set(df['entity']))),
-    # sorted(list(set(df['entity']))),
     ['Methane', 'Carbon Dioxide', 'Nitrous Oxide']\
         if climate_model == 'IPCC AR5 Linear Impulse Response Model'\
         else sorted(list(set(df['entity']))),
@@ -829,8 +825,9 @@ dis_aggregation = c2.selectbox(
 plot_style = c2.selectbox('Choose plot style', ['line', 'area'])
 
 c2.caption(f"""
-The timeseries depict depict annual emissions and the {temp_calc_method.lower()}
-consequent of those emissions, relative to the selected {baseline} baseline.
+The timeseries depict depict annual emissions and the
+{temp_calc_method.lower()} consequent of those emissions, relative to the
+selected {baseline} baseline.
 
 The top horizontal bar shows contributions over the *entire selected time
 period*, therefore presenting dominant contributions to *historical*
@@ -870,9 +867,9 @@ c_range = colour_range(c_domain, include_sum, dis_aggregation)
 if emissions_units == 'Absolute Mass':
     metric_units = ''
 if emissions_units == 'GWP100':
-    metric_units = f'CO\u2082-e'
+    metric_units = 'CO\u2082-e'
 if emissions_units == 'CO2-fe':
-    metric_units = f'CO\u2082-fe'
+    metric_units = 'CO\u2082-fe'
 
 if plot_style == 'line':
     chart_base = alt.Chart(alt_data).mark_line(opacity=0.9)
@@ -881,16 +878,15 @@ if plot_style == 'area':
 
 chart_1a = (
     chart_base
-       .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
-               y=alt.Y("GWP:Q",
-                       title=f'annual emissions (Gt {metric_units} per year)',
-                       # stack=None
-                       ),
-               color=alt.Color(dis_aggregation + ':N',
-                               scale=alt.Scale(domain=c_domain,
-                                               range=c_range)),
-               tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
-               )
+    .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
+            y=alt.Y("GWP:Q",
+                    title=f'annual emissions (Gt {metric_units} per year)',
+                    # stack=None
+                    ),
+            color=alt.Color(dis_aggregation + ':N',
+                            scale=alt.Scale(domain=c_domain, range=c_range)),
+            tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
+            )
 )
 
 bar_data = alt_data[alt_data[dis_aggregation]
@@ -978,8 +974,8 @@ if plot_style == 'area':
     chart_base = alt.Chart(alt_data).mark_area(opacity=0.9)
 
 
-
-chart_1b = (chart_base
+chart_1b = (
+    chart_base
     .encode(x=alt.X("year:T", title=None, axis=alt.Axis(grid=False)),
             y=alt.Y("warming:Q",
                     title='global temperature change (°C)',
@@ -1255,7 +1251,7 @@ The goals of the Paris Agreement open with:
 > including its objective, aims to strengthen the global response to the threat
 > of climate change, in the context of sustainable development and efforts to
 > eradicate poverty, including by:
-> 
+>
 > holding the increase in the global average temperature to well below 2°C
 > above pre-industrial levels and pursuing efforts to limit the temperature
 > increase to 1.5°C above pre-industrial levels, recognizing that this would
@@ -1317,17 +1313,13 @@ if you select both a group and any of its subgroups:** for example, selecting
 """)
 
 with st.expander(
-    'Which contributors to temperature change are included?'):
-
-# expand_emissions.markdown("""
-# ### Which contributors to temperature change are included
-# """)
-
+    'Which contributors to temperature change are included?'
+):
     list1, list2 = st.columns(2)
     list1.markdown("""
     #### Categories
-    (the main categories and subsector divisions from the IPCC 2006 Guidelines for
-    national greenhouse gas inventories [^IPCC 2006])
+    (the main categories and subsector divisions from the IPCC 2006 Guidelines
+    for national greenhouse gas inventories [^IPCC 2006])
     - 0: Total
         - 1: Energy
             - 1A: Fuel Combustion Activities
@@ -1361,6 +1353,7 @@ with st.expander(
     *these categories are aggregates implemented in PRIMAP-hist that differ
     slightly from the official IPCC 20006 Guidelines.
     """)
+
     list2.markdown(
         """
     #### Regions
@@ -1417,7 +1410,8 @@ with st.expander(
 # *A note on the non-inclusion of natural forcing:*
 
 with st.expander(
-    'What is the difference between absolute and relative temperature change?'):
+    'What is the difference between absolute and relative temperature change?'
+):
     st.markdown("""
     **Absolute Temperature Change** is defined here as warming consequent of
     emissions relative to the preindustrial baseline. The chosen model
@@ -1437,7 +1431,8 @@ with st.expander(
     """)
 
 with st.expander(
-    'What emissions metrics are available for presenting emissions data?'):
+    'What emissions metrics are available for presenting emissions data?'
+):
     st.markdown("""
     **Absolute Mass** is actual mass of each greenhouse gas emitted each year.
 
@@ -1476,9 +1471,10 @@ the information and insights presented here.**
 
 <p>&nbsp;</p>
 
-With support from [4C](https://4c-carbon.eu) (Climate-Carbon Interactions in the Current Century)
+With support from [4C](https://4c-carbon.eu) (Climate-Carbon Interactions in
+the Current Century)
 """,
-unsafe_allow_html=True
+    unsafe_allow_html=True
 )
 
 logo1, logo2, logo3, logo4, logo5, _ = st.columns([1, 1, 1, 1, 1, 5])
