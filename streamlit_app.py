@@ -36,7 +36,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Hide hamburger menu and 'made with streamlit' footer
+# Add custom CSS to hide the hamburger menu, 'made with streamlit' footer, and
+# github icon.
 # https://discuss.streamlit.io/t/remove-made-with-streamlit-from-bottom-of-app/1370/2
 # also this:
 # https://discuss.streamlit.io/t/how-do-i-hide-remove-the-menu-in-production/362/7
@@ -44,6 +45,7 @@ hide_streamlit_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
+            #GithubIcon {visibility: hidden;}
             </style>
             """
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
