@@ -1,19 +1,14 @@
 """Streamlit web app calculating and exploring contributions to warming."""
+import datetime as dt
 import io
 import csv
-import datetime as dt
-# from functools import cache
-# from numpy_lru_cache_decorator import np_cache
-
-# import numba
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+import matplotlib
 import altair as alt
 import seaborn as sns
-import matplotlib
-# import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 import pycountry
 
@@ -891,7 +886,7 @@ chart_1a = (
                        title=f'annual emissions (Gt {metric_units} per year)',
                        # stack=None
                        ),
-               color=alt.Color(dis_aggregation,
+               color=alt.Color(dis_aggregation + ':N',
                                scale=alt.Scale(domain=c_domain,
                                                range=c_range)),
                tooltip=[(dis_aggregation + ':N'), 'GWP:Q']
@@ -902,7 +897,7 @@ bar_data = alt_data[alt_data[dis_aggregation]
                     != 'SUM'].astype(dtype={'year': 'int32'})
 
 chart_1a2 = (alt.Chart(bar_data, height=50).mark_bar(opacity=0.9).encode(
-    color=alt.Color(dis_aggregation,
+    color=alt.Color(dis_aggregation + ':N',
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
     x=alt.X('sum(GWP):Q', stack="normalize", axis=alt.Axis(
@@ -916,7 +911,7 @@ chart_1a2 = (alt.Chart(bar_data, height=50).mark_bar(opacity=0.9).encode(
 last_decade = bar_data.loc[(date_range[1] - bar_data['year'] < 10)]
 earliest_year = last_decade['year'].min()
 chart_1a3 = (alt.Chart(last_decade, height=50).mark_bar(opacity=0.9).encode(
-    color=alt.Color(dis_aggregation,
+    color=alt.Color(dis_aggregation + ':N',
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
     x=alt.X('sum(GWP):Q', stack="normalize", axis=alt.Axis(
@@ -990,7 +985,7 @@ chart_1b = (chart_base
                     title='global temperature change (°C)',
                     # stack=None
                     ),
-            color=alt.Color(dis_aggregation,
+            color=alt.Color(dis_aggregation + ':N',
                             scale=alt.Scale(domain=c_domain, range=c_range),
                             legend=None),
             tooltip=[(dis_aggregation + ':N'), 'warming:Q']
@@ -1018,7 +1013,7 @@ chart_1b2 = (alt.Chart(bar_data[bar_data['year'] == date_range[1]], height=50)
                                 title=('temperature change breakdown in ' +
                                        f'{date_range[1]} ' +
                                        f'relative to {baseline}')),
-                        color=alt.Color(dis_aggregation,
+                        color=alt.Color(dis_aggregation + ':N',
                         scale=alt.Scale(domain=c_domain, range=c_range),
                         legend=None),
                         tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
@@ -1036,7 +1031,7 @@ chart_1b3 = (alt.Chart(bar_keys, height=50).mark_bar(opacity=0.9).encode(
             axis=alt.Axis(domain=False, ticks=False, labels=False),
             title=('temperature change breakdown between ' +
                    f'{earliest_year}-{date_range[1]}')),
-    color=alt.Color(dis_aggregation,
+    color=alt.Color(dis_aggregation + ':N',
                     scale=alt.Scale(domain=c_domain, range=c_range),
                     legend=None),
     tooltip=[(dis_aggregation + ':N'), 'warming:Q'])
@@ -1212,7 +1207,7 @@ fig = go.Figure(data=[go.Sankey(
             align='left', showarrow=False, x=0.0, y=1.0)
     ]))
 
-sankey_title = f'warming between in {date_range[1]} relative to {baseline} (°C)'
+sankey_title = f'warming in {date_range[1]} relative to {baseline} (°C)'
 c3.subheader(sankey_title)
 fig.update_layout(
     # font=dict(size=10),
