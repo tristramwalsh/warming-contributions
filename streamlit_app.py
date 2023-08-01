@@ -240,7 +240,9 @@ def adjusted_scientific_notation(val, letter, num_decimals=2, exponent_pad=2):
         return adjusted_mantissa_string+"E"+adjusted_exponent_string
 
 
-@st.cache(show_spinner=False, suppress_st_warning=True)
+@st.cache_data(show_spinner=False,
+            #    suppress_st_warning=True
+               )
 def load_data(file):
     """Load the dataset, and rename codes with human-friendly terms."""
     # NOTE: function approach allows streamlit caching,
@@ -323,12 +325,14 @@ def load_data(file):
     return df
 
 
-@st.cache(show_spinner=False, suppress_st_warning=True)
+@st.cache_data(show_spinner=False,
+            #    suppress_st_warning=True
+               )
 def calc(df, scenarios, countries, categories, entities, baseline,
          emissions_units, future_toggle,
          future_co2_zero_year, future_ch4_rate, future_n2o_rate):
     """Calculate warming impact, and emissions metrics, for given selection."""
-    
+
     # the GWP_100 factors for [CO2, CH4, N2O] respectively
     gwp = {'Carbon Dioxide': 1., 'Methane': 28., 'Nitrous Oxide': 265.}
 
@@ -338,19 +342,19 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                     (df['country'].isin(countries)) &
                     (df['category'].isin(categories)) &
                     (df['entity'].isin(entities))]
-    
+
     # Prepare the virtual csv files to output calculated things to
     column_names = ['scenario', 'country', 'category', 'entity', 'unit']
     ny = future_co2_zero_year - yr0 + 1 if future_toggle else yr1 - yr0 + 1
     PR_year = np.arange(ny) + yr0
     column_names.extend([str(i) for i in PR_year])
-    
+
     # For the following simple climate model calculations, it is far more
     # performant to write calculation results to a virtual in-memory CSV and
     # read that CSV into pandas after all calculations are complete, compared
     # with writing over an existing pandas dataframe, or creating a new one "on
-    #  the fly".
-  
+    # the fly".
+
     # Create in memory virtual csv to write temperatures to
     output_T = io.StringIO()
     csv_writer_T = csv.DictWriter(output_T, fieldnames=column_names)
@@ -362,23 +366,27 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     csv_writer_E.writeheader()
 
     t1 = dt.datetime.now()
-    
-    # Invert linear model to calculate forcing-equivalent emissions.
+
+    # Invert linear model to calculate CO2-forcing-equivalent emissions.
     fe_matrix = np.linalg.inv(EFmod(ny, a_params('Carbon Dioxide')))
-    
+
     i = 1
     number_of_series = len(countries) * len(categories) * len(entities)
-    calc_text.text('calculating...')
+    # (Update to st.cache)
+    calc_text = st.sidebar.empty()
+    calc_text.text('Calculating...')
+    # progress_text = "Calculating..."
+    # calc_bar = st.sidebar.progress(0, text=progress_text)
+
     for country in countries:
         for category in categories:
             for entity in entities:
 
                 # Visually show how far through the calculation we are
-                # name = f'{scenarios}, {country}, {category}, {entity}'
                 percentage = int(i/number_of_series*100)
-                loading_bar = percentage // 5*'.' + (20 - percentage // 5)*' '
-                # print(f'\r{percentage}% {loading_bar} {name}', end='')
+                loading_bar = percentage // 5*'|' + (20 - percentage // 5)*'.'
                 calc_text.text(f'calculating {loading_bar} {percentage}% ')
+                # calc_bar.progress(percentage, text=progress_text)
                 i += 1
 
                 df_timeseries = emis_to_calculate[
@@ -466,11 +474,11 @@ def calc(df, scenarios, countries, categories, entities, baseline,
 
                         # temp_c stands for temperature in counterfactual world
                         temp_c = ETmod(ny, a_params(entity)) @ arr_timeseries2
-                        
+
                         # In the first approach below, we simply call relative
                         # emissions 0 in the years before the baseline.
                         # temp = temp-temp_c
-                        
+
                         # In this second approach option, backtrack before the
                         # baseline year with the absolute historical
                         # temperature response
@@ -484,9 +492,9 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                                  'entity': entity,
                                  'unit': 'K'}
                     new_row_T.update({str(PR_year[i]): temp[i]
-                                    for i in range(len(temp))})
+                                     for i in range(len(temp))})
                     csv_writer_T.writerow(new_row_T)
-                    
+
                     ####################################################
                     # SECOND compute emissions for emissions virtual csv
                     if emissions_units == 'GWP100':
@@ -509,7 +517,8 @@ def calc(df, scenarios, countries, categories, entities, baseline,
                     csv_writer_E.writerow(new_row_E)
 
     t2 = dt.datetime.now()
-    calc_text.text(f'new calculation took: {(t2-t1)}')
+    calc_text.text(f'New calculation took: {(t2-t1)}')
+    # calc_bar.text(f'New calculation took: {(t2-t1)}')
 
     output_T.seek(0)  # we need to get back to the start of the StringIO
     df_T = pd.read_csv(output_T)
@@ -526,7 +535,7 @@ def calc(df, scenarios, countries, categories, entities, baseline,
     return df_T, df_E
 
 
-@st.cache(show_spinner=False)
+@st.cache_data(show_spinner=False)
 def prepare_data(df, scenarios, countries, categories, entities,
                  dis_aggregation, date_range, include_total):
     """Group, time-slice, and calculate sum as required."""
@@ -782,17 +791,6 @@ entities = sorted(st.sidebar.multiselect(
           please scroll down for the main text.'
 ))
 
-calc_text = st.sidebar.empty()
-
-if len(double_counter) > 0:
-    st.sidebar.write('---')
-    st.sidebar.warning('Watch Out: Double Counting')
-    double_count_expander = st.sidebar.expander('View Double Counting Details')
-    double_count_expander.write(
-        'This selection double counts the following (sub)categories;\
-         make sure this is what you intended:')
-    for double in double_counter:
-        double_count_expander.write(f'- {double}')
 
 ####
 # IF 'IPCC AR5 Linear Impulse Response Model' MODEL SELECTED,
@@ -803,6 +801,16 @@ if climate_model == 'IPCC AR5 Linear Impulse Response Model':
                       baseline, emissions_units,
                       future_toggle, future_co2_zero_year,
                       future_ch4_rate, future_n2o_rate)
+
+if len(double_counter) > 0:
+    st.sidebar.write('---')
+    st.sidebar.warning('Watch Out: Double Counting')
+    double_count_expander = st.sidebar.expander('View Double Counting Details')
+    double_count_expander.write(
+        'This selection double counts the following (sub)categories;\
+         make sure this is what you intended:')
+    for double in double_counter:
+        double_count_expander.write(f'- {double}')
 
 # CHECK DATA AVAILABLE
 if prepare_data(df_E, scenarios, countries, categories, entities, 'country',
@@ -844,8 +852,8 @@ large warming and large cooling will therefore have similar sized bars.
 # CREATE EMISSIONS PLOT
 include_sum = True if plot_style == 'line' else False
 grouped_data_E = prepare_data(df_E,
-                                scenarios, countries, categories, entities,
-                                dis_aggregation, date_range, include_sum)
+                              scenarios, countries, categories, entities,
+                              dis_aggregation, date_range, include_sum)
 
 # Transform from wide data to long data (altair likes long data)
 alt_data = (grouped_data_E.T.reset_index()
