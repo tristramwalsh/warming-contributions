@@ -1483,11 +1483,16 @@ the Current Century)
 )
 
 logo1, logo2, logo3, logo4, logo5, _ = st.columns([1, 1, 1, 1, 1, 5])
-logo1.image('https://drive.google.com/uc?export=view&id=1ORZiuxMRqF8TE0tvRFqAK5jSLL3K2dpe')
-logo2.image("https://drive.google.com/uc?export=view&id=1Ocp5yrIFc92NfScro9L7CU-Ctpz5YmUi")
-logo3.image("https://drive.google.com/uc?export=view&id=1ONTfrsFQu0lnuqjbrEw26TLUdUZ_r9rZ")
-logo4.image('https://drive.google.com/uc?export=view&id=1OX6NUw3aghAwKfDH2-a9gHLEvel1Q4A4')
-logo5.image("https://drive.google.com/uc?export=view&id=1OGVCRwfaZTYPx3-LkcVx6qvDnZNjhuAU")
+# logo1.image('https://drive.google.com/uc?export=view&id=1ORZiuxMRqF8TE0tvRFqAK5jSLL3K2dpe')
+# logo2.image("https://drive.google.com/uc?export=view&id=1Ocp5yrIFc92NfScro9L7CU-Ctpz5YmUi")
+# logo3.image("https://drive.google.com/uc?export=view&id=1ONTfrsFQu0lnuqjbrEw26TLUdUZ_r9rZ")
+# logo4.image('https://drive.google.com/uc?export=view&id=1OX6NUw3aghAwKfDH2-a9gHLEvel1Q4A4')
+# logo5.image("https://drive.google.com/uc?export=view&id=1OGVCRwfaZTYPx3-LkcVx6qvDnZNjhuAU")
+logo1.image("./imgs/4Clogo.jpeg")
+logo2.image("./imgs/ONZlogo.png")
+logo3.image("./imgs/ECIlogo.jpeg")
+logo4.image("./imgs/SoGElogo.png")
+logo5.image("./imgs/Oxfordlogo.png")
 
 st.caption("""
 ---
