@@ -25,16 +25,19 @@ st.set_page_config(
 # https://discuss.streamlit.io/t/tool-tips-in-fullscreen-mode-for-charts/6800/10
 st.markdown('<style>#vg-tooltip-element{z-index: 1000051}</style>',
             unsafe_allow_html=True)
+
 # This next piece prevents the altair three dot menu from appearing.
 # source:
 # https://discuss.streamlit.io/t/does-altairs-set-embed-options-work-with-streamlit/1675
-st.markdown("""
-    <style type='text/css'>
-        details {
-            display: none;
-        }
-    </style>
-""", unsafe_allow_html=True)
+# Note, these lines broke the st.expander feature, so I have commented it out
+# as a quick fix, as the expanders are an essential part of the app design.
+# st.markdown("""
+#     <style type='text/css'>
+#         details {
+#             display: none;
+#         }
+#     </style>
+# """, unsafe_allow_html=True)
 
 # Add custom CSS to hide the hamburger menu, 'made with streamlit' footer, and
 # github icon.
